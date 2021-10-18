@@ -4,6 +4,8 @@
 # Date: 11/10/2021
 
 """ Simulation in free space """
+# FDTD simulation of a pulse in free space after 100 steps. The
+# pulse originated in the center and travels outward.
 
 import numpy as np
 import matplotlib
@@ -36,7 +38,7 @@ for time_step in range(1, nsteps + 1):
         hy[k] = hy[k] + 0.5 * (ex[k] - ex[k + 1])
 
 fig, (ax1, ax2) = plt.subplots(2)
-fig.suptitle('FDTD simulation of a pulse in free space after 100 time steps')
+fig.suptitle(r'FDTD simulation of a pulse in free space after 100 time steps')
 ax1.plot(ex, 'k', lw=1)
 ax1.text(100, 0.5, 'T = {}'.format(time_step), horizontalalignment='center')
 ax1.set(xlim=(0, 200), ylim=(-1.2, 1.2), ylabel=r'E$_x$')
