@@ -4,8 +4,8 @@
 # Date: 11/10/2021
 
 """ Simulation in free space """
-# FDTD simulation of a pulse in free space after 100 steps. The
-# pulse originated in the center and travels outward.
+# FDTD simulation of a pulse in free space after 100 steps.
+# The pulse originated in the center and travels outward.
 
 import numpy as np
 import matplotlib
