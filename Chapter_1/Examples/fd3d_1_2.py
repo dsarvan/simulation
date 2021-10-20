@@ -5,11 +5,11 @@
 
 """ Simulation in free space - absorbing boundary condition added """
 
+import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib
 matplotlib.rcParams.update({'font.family': 'serif', 'font.size': 8,
-    'axes.labelsize': 10, 'axes.titlesize': 10, 'figure.titlesize': 10})
-import matplotlib.pyplot as plt
+                            'axes.labelsize': 10, 'axes.titlesize': 10, 'figure.titlesize': 10})
 
 ke = 200
 ex = np.zeros(ke)
@@ -21,8 +21,8 @@ t0 = 40
 spread = 12
 nsteps = 250
 
-boundary_low  = [0,0]
-boundary_high = [0,0]
+boundary_low = [0, 0]
+boundary_high = [0, 0]
 
 # desired points for plotting
 points = [
@@ -33,7 +33,7 @@ points = [
 
 # FDTD loop
 for time_step in range(1, nsteps + 1):
-    
+
     # calculate the Ex field
     for k in range(1, ke):
         ex[k] = ex[k] + 0.5 * (hy[k - 1] - hy[k])
@@ -59,12 +59,15 @@ for time_step in range(1, nsteps + 1):
 fig = plt.figure(figsize=(8, 5.25))
 fig.suptitle(r'FDTD simulation with absorbing boundary conditions')
 
+
 def plotting(data, timestep, label):
     """ plot of E field at a single time step """
     ax.plot(data, color='k', linewidth=1)
-    ax.set(xlim=(0, 199), ylim=(-0.2, 1.2), xlabel=r'{}'.format(label), ylabel=r'E$_x$')
-    ax.set(xticks=np.arange(0,199,20), yticks=np.arange(0,1.2,1))
+    ax.set(xlim=(0, 199), ylim=(-0.2, 1.2),
+           xlabel=r'{}'.format(label), ylabel=r'E$_x$')
+    ax.set(xticks=np.arange(0, 199, 20), yticks=np.arange(0, 1.2, 1))
     ax.text(100, 0.5, 'T = {}'.format(timestep), horizontalalignment='center')
+
 
 for subplot_num, plot_data in enumerate(points):
     ax = fig.add_subplot(3, 1, subplot_num + 1)
