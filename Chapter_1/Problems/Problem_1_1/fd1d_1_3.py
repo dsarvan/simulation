@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# File: fd3d_1_3.py
+# File: fd1d_1_3.py
 # Name: D.Saravanan
 # Date: 18/10/2021
 
@@ -48,4 +48,4 @@ ax2.plot(hy, 'k', lw=1)
 ax2.set(xlim=(0, 200), ylim=(-1.2, 1.2), xlabel=r'FDTD cells', ylabel=r'H$_y$')
 ax2.set(xticks=range(0, 201, 20), yticks=np.arange(-1, 1.2, 1))
 plt.subplots_adjust(bottom=0.2, hspace=0.45)
-plt.savefig('fd3d_1_3.pdf')
+plt.savefig('fd1d_1_3.pdf')
