@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# File: fd3d_1_2.py
+# File: fd1d_1_2.py
 # Name: D.Saravanan
 # Date: 19/10/2021
 
@@ -59,7 +59,6 @@ for time_step in range(1, nsteps + 1):
 fig = plt.figure(figsize=(8, 5.25))
 fig.suptitle(r'FDTD simulation with absorbing boundary conditions')
 
-
 def plotting(data, timestep, label):
     """ plot of E field at a single time step """
     ax.plot(data, color='k', linewidth=1)
@@ -68,10 +67,9 @@ def plotting(data, timestep, label):
     ax.set(xticks=np.arange(0, 199, 20), yticks=np.arange(0, 1.2, 1))
     ax.text(100, 0.5, 'T = {}'.format(timestep), horizontalalignment='center')
 
-
 for subplot_num, plot_data in enumerate(points):
     ax = fig.add_subplot(3, 1, subplot_num + 1)
     plotting(plot_data['data'], plot_data['num_steps'], plot_data['label'])
 
 plt.tight_layout()
-plt.savefig('fd3d_1_2.pdf')
+plt.savefig('fd1d_1_2.pdf')
