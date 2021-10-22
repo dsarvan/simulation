@@ -3,7 +3,7 @@
 # Name: D.Saravanan
 # Date: 19/10/2021
 
-""" Simulation in free space - absorbing boundary condition added """
+""" Simulation of a pulse with absorbing boundary conditions """
 
 import matplotlib.pyplot as plt
 import numpy as np
