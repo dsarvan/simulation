@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# File: fd1d_1_2.py
+# File: fd1d_1_1.py
 # Name: D.Saravanan
 # Date: 19/10/2021
 
@@ -72,4 +72,4 @@ for subplot_num, plot_data in enumerate(points):
     plotting(plot_data['data'], plot_data['num_steps'], plot_data['label'])
 
 plt.tight_layout()
-plt.savefig('fd1d_1_2.png')
+plt.savefig('fd1d_1_1.png')
