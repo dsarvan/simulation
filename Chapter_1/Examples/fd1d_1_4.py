@@ -16,8 +16,8 @@ ke = 200
 ex = np.zeros(ke)
 hy = np.zeros(ke)
 
-ddx = 0.01          # Cell size
-dt = ddx/6e8        # Time step size
+dx = 0.01          # Cell size
+dt = dx/6e8        # Time step size
 freq = 700e6        # Frequency 700 MHz
 
 boundary_low = [0, 0]
