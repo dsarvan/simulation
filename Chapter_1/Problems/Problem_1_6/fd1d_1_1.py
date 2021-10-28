@@ -10,24 +10,29 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib
 matplotlib.rcParams.update({'font.family': 'serif', 'font.size': 8,
-    'axes.labelsize': 10, 'axes.titlesize': 10, 'figure.titlesize': 10})
+                            'axes.labelsize': 10, 'axes.titlesize': 10, 'figure.titlesize': 10})
 
 ke = 200
 ex = np.zeros(ke)
 hy = np.zeros(ke)
 
-dx = 0.01          # Cell size
-dt = dx/6e8        # Time step size
-freq = 700e6       # Frequency 700 MHz
+# Create Dielectric Profile
+epsilon = 20                         # dielectric constant
+cb = np.ones(ke)                     # dielectric medium
+cb = 0.5 * cb                        # dielectric medium
+cb[100:] = 0.5/epsilon               # dielectric medium
+
+# calculate the wavelength
+c0 = 3e8                             # speed of light
+freq = 3e9                           # Frequency 3 GHz
+lamda = c0/(np.sqrt(epsilon)*freq)   # Wavelength
+
+# calculate the cell size
+dx = lamda/10                        # Cell size
+dt = dx/6e8                          # Time step size
 
 boundary_low = [0, 0]
 boundary_high = [0, 0]
-
-# Create Dielectric Profile
-epsilon = 4
-cb = np.ones(ke)
-cb = 0.5 * cb
-cb[100:] = 0.5/epsilon
 
 nsteps = 425
 
@@ -39,7 +44,7 @@ points = [
 
 # FDTD loop
 for time_step in range(1, nsteps + 1):
-    
+
     # calculate the Ex field
     for k in range(1, ke):
         ex[k] = ex[k] + cb[k] * (hy[k - 1] - hy[k])
@@ -65,6 +70,7 @@ for time_step in range(1, nsteps + 1):
 fig = plt.figure(figsize=(8, 3.5))
 fig.suptitle(r'FDTD simulation of a sinusoidal hitting a dielectric medium')
 
+
 def plotting(data, timestep, label):
     """ plot of E field at a single time step """
     ax.plot(data, color='k', linewidth=1)
@@ -74,6 +80,7 @@ def plotting(data, timestep, label):
     ax.set(xticks=np.arange(0, 199, 20), yticks=np.arange(-1, 1.2, 1))
     ax.text(50, 0.5, 'T = {}'.format(timestep), horizontalalignment='center')
     ax.text(170, 0.5, 'Eps = {}'.format(epsilon), horizontalalignment='center')
+
 
 for subplot_num, plot_data in enumerate(points):
     ax = fig.add_subplot(2, 1, subplot_num + 1)
