@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib
 matplotlib.rcParams.update({'font.family': 'serif', 'font.size': 8,
-    'axes.labelsize': 10, 'axes.titlesize': 10, 'figure.titlesize': 10})
+                            'axes.labelsize': 10, 'axes.titlesize': 10, 'figure.titlesize': 10})
 
 ke = 200
 ex = np.zeros(ke)
@@ -39,7 +39,7 @@ points = [
 
 # FDTD loop
 for time_step in range(1, nsteps + 1):
-    
+
     # calculate the Ex field
     for k in range(1, ke):
         ex[k] = ex[k] + cb[k] * (hy[k - 1] - hy[k])
@@ -62,10 +62,11 @@ for time_step in range(1, nsteps + 1):
         if time_step == plot_data['num_steps']:
             plot_data['data'] = np.copy(ex)
 
-    freq = freq + 300
+    freq = freq + 300e6
 
 fig = plt.figure(figsize=(8, 3.5))
 fig.suptitle(r'FDTD simulation of a sinusoidal hitting a dielectric medium')
+
 
 def plotting(data, timestep, label):
     """ plot of E field at a single time step """
@@ -77,9 +78,10 @@ def plotting(data, timestep, label):
     ax.text(50, 0.5, 'T = {}'.format(timestep), horizontalalignment='center')
     ax.text(170, 0.5, 'Eps = {}'.format(epsilon), horizontalalignment='center')
 
+
 for subplot_num, plot_data in enumerate(points):
     ax = fig.add_subplot(2, 1, subplot_num + 1)
     plotting(plot_data['data'], plot_data['num_steps'], plot_data['label'])
 
 plt.subplots_adjust(bottom=0.2, hspace=0.45)
-plt.savefig('fd1d_1_2.pdf')
+plt.savefig('fd1d_1_2.png')
