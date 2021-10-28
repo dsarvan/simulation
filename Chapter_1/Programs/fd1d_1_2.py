@@ -72,4 +72,4 @@ for subplot_num, plot_data in enumerate(points):
     plotting(plot_data['data'], plot_data['num_steps'], plot_data['label'])
 
 plt.tight_layout()
-plt.savefig('fd1d_1_2.pdf')
+plt.savefig('fd1d_1_2.png')
