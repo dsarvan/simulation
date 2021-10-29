@@ -24,8 +24,8 @@ boundary_high = [0, 0]
 
 # Create Dielectric Profile
 epsz = 8.854e-12    # vacuum permittivity (F/m)
-epsilon = 4         # relative permittivity 
-sigma = 0.04        # conductivity
+epsilon = 4         # relative permittivity
+sigma = 0.04        # conductivity (S/m)
 
 ca = np.ones(ke)
 cb = 0.5 * np.ones(ke)
@@ -33,7 +33,7 @@ cb = 0.5 * np.ones(ke)
 eaf = dt * sigma/(2*epsz*epsilon)
 ca[100:] = (1 - eaf)/(1 + eaf)
 cb[100:] = 0.5/(epsilon * (1 + eaf))
- 
+
 nsteps = 500
 
 # FDTD loop
