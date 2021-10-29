@@ -42,6 +42,7 @@ for time_step in range(1, nsteps + 1):
     # calculate the Ex field
     for k in range(1, ke):
         ex[k] = ca[k] * ex[k] + cb[k] * (hy[k - 1] - hy[k])
+        print(ca[k], cb[k])
 
     # put a sinusoidal at the low end
     ex[5] = ex[5] + np.sin(2 * np.pi * freq * dt * time_step)
