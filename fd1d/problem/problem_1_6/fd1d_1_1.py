@@ -3,33 +3,43 @@
 # Name: D.Saravanan
 # Date: 22/10/2021
 
-""" Simulation of a propagating sinusoidal wave of 3 GHz striking a medium with a
-relative dielectric constant of 20 """
+""" Simulation of a propagating sinusoidal wave of 3 GHz
+striking a medium with a relative dielectric constant of 20 """
 
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib
-matplotlib.rcParams.update({'font.family': 'serif', 'font.size': 8,
-                            'axes.labelsize': 10, 'axes.titlesize': 10, 'figure.titlesize': 10})
 
-ke = 200
+matplotlib.rcParams["text.usetex"] = True
+matplotlib.rcParams["pgf.texsystem"] = "pdflatex"
+matplotlib.rcParams.update(
+    {
+        "font.family": "serif",
+        "font.size": 8,
+        "axes.labelsize": 10,
+        "axes.titlesize": 10,
+        "figure.titlesize": 10,
+    }
+)
+
+ke = 201
 ex = np.zeros(ke)
 hy = np.zeros(ke)
 
 # Create Dielectric Profile
-epsilon = 20                         # dielectric constant
-cb = np.ones(ke)                     # dielectric medium
-cb = 0.5 * cb                        # dielectric medium
-cb[100:] = 0.5/epsilon               # dielectric medium
+epsilon = 20  # dielectric constant
+cb = np.ones(ke)  # dielectric medium
+cb = 0.5 * cb  # dielectric medium
+cb[100:] = 0.5 / epsilon  # dielectric medium
 
 # calculate the wavelength
-c0 = 3e8                             # speed of light
-freq = 3e9                           # Frequency 3 GHz
-lamda = c0/(np.sqrt(epsilon)*freq)   # Wavelength
+c0 = 3e8  # speed of light
+freq = 3e9  # Frequency 3 GHz
+lamda = c0 / (np.sqrt(epsilon) * freq)  # Wavelength
 
 # calculate the cell size
-dx = lamda/10                        # Cell size
-dt = dx/6e8                          # Time step size
+dx = lamda / 10  # Cell size
+dt = dx / 6e8  # Time step size
 
 boundary_low = [0, 0]
 boundary_high = [0, 0]
@@ -38,8 +48,8 @@ nsteps = 425
 
 # desired points for plotting
 points = [
-    {'num_steps': 150, 'data': None, 'label': ' '},
-    {'num_steps': 425, 'data': None, 'label': 'FDTD cells'}
+    {"num_steps": 150, "data": None, "label": " "},
+    {"num_steps": 425, "data": None, "label": "FDTD cells"},
 ]
 
 # FDTD loop
@@ -64,27 +74,26 @@ for time_step in range(1, nsteps + 1):
 
     # save data at certain points for plotting
     for plot_data in points:
-        if time_step == plot_data['num_steps']:
-            plot_data['data'] = np.copy(ex)
+        if time_step == plot_data["num_steps"]:
+            plot_data["data"] = np.copy(ex)
 
 fig = plt.figure(figsize=(8, 3.5))
-fig.suptitle(r'FDTD simulation of a sinusoidal hitting a dielectric medium')
+fig.suptitle(r"FDTD simulation of a sinusoidal hitting a dielectric medium")
 
 
 def plotting(data, timestep, label):
-    """ plot of E field at a single time step """
-    ax.plot(data, color='k', linewidth=1)
-    ax.plot((0.5/cb - 1)/3, 'k--', linewidth=0.75)
-    ax.set(xlim=(0, 199), ylim=(-1.2, 1.2),
-           xlabel=r'{}'.format(label), ylabel=r'E$_x$')
-    ax.set(xticks=np.arange(0, 199, 20), yticks=np.arange(-1, 1.2, 1))
-    ax.text(50, 0.5, 'T = {}'.format(timestep), horizontalalignment='center')
-    ax.text(170, 0.5, 'Eps = {}'.format(epsilon), horizontalalignment='center')
+    """plot of E field at a single time step"""
+    ax.plot(data, color="k", linewidth=1)
+    ax.plot((0.5 / cb - 1) / 3, "k--", linewidth=0.75)
+    ax.set(xlim=(0, 200), ylim=(-1.2, 1.2), xlabel=r"{}".format(label), ylabel=r"E$_x$")
+    ax.set(xticks=np.arange(0, 220, 20), yticks=np.arange(-1, 1.2, 1))
+    ax.text(50, 0.5, "T = {}".format(timestep), horizontalalignment="center")
+    ax.text(170, 0.5, "Eps = {}".format(epsilon), horizontalalignment="center")
 
 
 for subplot_num, plot_data in enumerate(points):
     ax = fig.add_subplot(2, 1, subplot_num + 1)
-    plotting(plot_data['data'], plot_data['num_steps'], plot_data['label'])
+    plotting(plot_data["data"], plot_data["num_steps"], plot_data["label"])
 
 plt.subplots_adjust(bottom=0.2, hspace=0.45)
-plt.savefig('fd1d_1_1.png')
+plt.savefig("fd1d_1_1.png")
