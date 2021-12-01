@@ -41,7 +41,6 @@ for time_step in range(1, nsteps + 1):
         hy[k] = hy[k] + 0.5 * (ex[k] - ex[k + 1])
 
     # put a Gaussian pulse in the middle
-    # hy[kc - 1] = -np.exp(-0.5 * ((t0 - time_step)/spread)**2)
     hy[kc] = np.exp(-0.5 * ((t0 - time_step) / spread) ** 2)
 
     # calculate the Ex field
