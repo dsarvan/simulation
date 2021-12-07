@@ -9,8 +9,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-# matplotlib.rcParams["text.usetex"] = True
-# matplotlib.rcParams["pgf.texsystem"] = "pdflatex"
+matplotlib.rcParams["text.usetex"] = True
+matplotlib.rcParams["pgf.texsystem"] = "pdflatex"
 matplotlib.rcParams.update(
     {
         "font.family": "serif",
