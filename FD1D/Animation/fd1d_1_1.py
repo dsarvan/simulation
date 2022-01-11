@@ -36,7 +36,7 @@ nsteps = 300
 
 # define the meta data for the movie
 fwriter = animation.writers["ffmpeg"]
-data = dict(title="FDTD simulation of a pulse in free space")
+data = dict(title="Simulation in free space")
 writer = fwriter(fps=15, metadata=data)
 
 # draw an empty plot, but preset the plot x- and y- limits
@@ -45,9 +45,9 @@ fig.suptitle(r"FDTD simulation of a pulse in free space")
 (line1,) = ax1.plot(ex, "k", lw=1)
 (line2,) = ax2.plot(hy, "k", lw=1)
 time_text = ax1.text(0.02, 0.90, "", transform=ax1.transAxes)
-ax1.set(xlim=(0, ke), ylim=(-1.2, 1.2), ylabel=r"$E_x$")
+ax1.set(xlim=(0, 200), ylim=(-1.2, 1.2), ylabel=r"$E_x$")
 ax1.set(xticks=range(0, 220, 20), yticks=np.arange(-1, 1.2, 1))
-ax2.set(xlim=(0, ke), ylim=(-1.2, 1.2), xlabel=r"FDTD cells", ylabel=r"$H_y$")
+ax2.set(xlim=(0, 200), ylim=(-1.2, 1.2), xlabel=r"FDTD cells", ylabel=r"$H_y$")
 ax2.set(xticks=range(0, 220, 20), yticks=np.arange(-1, 1.2, 1))
 
 # FDTD loop
