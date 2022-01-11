@@ -36,9 +36,7 @@ nsteps = 300
 
 # define the meta data for the movie
 fwriter = animation.writers["ffmpeg"]
-data = dict(
-    title="Gaussian pulse", artist="Saran", comment="Simulation of Gaussian pulse"
-)
+data = dict(title="FDTD simulation of a pulse in free space")
 writer = fwriter(fps=15, metadata=data)
 
 # draw an empty plot, but preset the plot x- and y- limits
