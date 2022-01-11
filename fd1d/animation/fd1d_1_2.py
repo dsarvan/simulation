@@ -73,6 +73,6 @@ with writer.saving(fig, "fd1d_1_2.mp4", 100):
             hy[k] = hy[k] + 0.5 * (ex[k] - ex[k + 1])
 
         line1.set_ydata(ex)
-        time_text.set_text('T = {}'.format(time_step))
+        time_text.set_text("T = {}".format(time_step))
         line2.set_ydata(hy)
         writer.grab_frame()
