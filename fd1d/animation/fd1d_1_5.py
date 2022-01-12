@@ -61,6 +61,8 @@ time_text1 = ax1.text(0.02, 0.90, "", transform=ax1.transAxes)
 time_text2 = ax2.text(0.02, 0.90, "", transform=ax2.transAxes)
 epsn_text1 = ax1.text(0.80, 0.80, "", transform=ax1.transAxes)
 epsn_text2 = ax2.text(0.80, 0.80, "", transform=ax2.transAxes)
+cond_text1 = ax1.text(0.80, 0.70, "", transform=ax1.transAxes)
+cond_text2 = ax2.text(0.80, 0.70, "", transform=ax2.transAxes)
 ax1.plot((0.5 / cb - 1) / 3, "k--", linewidth=0.75)
 ax1.set(xlim=(0, 200), ylim=(-1.2, 1.2), ylabel=r"$E_x$")
 ax1.set(xticks=range(0, 220, 20), yticks=np.arange(-1.2, 1.4, 0.4))
@@ -93,33 +95,11 @@ with writer.saving(fig, "fd1d_1_5.mp4", 100):
         line1.set_ydata(ex)
         time_text1.set_text("T = {}".format(time_step))
         epsn_text1.set_text("Eps = {}".format(epsilon))
+        cond_text1.set_text("Cond = {}".format(sigma))
+
         line2.set_ydata(hy)
         time_text2.set_text("T = {}".format(time_step))
         epsn_text2.set_text("Eps = {}".format(epsilon))
+        cond_text2.set_text("Cond = {}".format(sigma))
+
         writer.grab_frame()
-
-
-
-
-
-
-
-
-
-
-#ax1.plot(ex, "k", lw=1)
-#ax1.plot((0.5 / cb - 1) / 3, "k--", lw=0.75)
-#ax1.text(50, 0.5, "T = {}".format(time_step), horizontalalignment="center")
-#ax1.text(170, 0.5, "Eps = {}".format(epsilon), horizontalalignment="center")
-#ax1.text(170, -0.5, "Cond = {}".format(sigma), horizontalalignment="center")
-#ax1.set(xlim=(0, 200), ylim=(-1.2, 1.2), ylabel=r"E$_x$")
-#ax1.set(xticks=range(0, 220, 20), yticks=np.arange(-1, 1.2, 1))
-#ax2.plot(hy, "k", lw=1)
-#ax2.plot((0.5 / cb - 1) / 3, "k--", lw=0.75)
-#ax2.text(50, 0.5, "T = {}".format(time_step), horizontalalignment="center")
-#ax2.text(170, 0.5, "Eps = {}".format(epsilon), horizontalalignment="center")
-#ax2.text(170, -0.5, "Cond = {}".format(sigma), horizontalalignment="center")
-#ax2.set(xlim=(0, 200), ylim=(-1.2, 1.2), xlabel=r"FDTD cells", ylabel=r"H$_y$")
-#ax2.set(xticks=range(0, 220, 20), yticks=np.arange(-1, 1.2, 1))
-#plt.subplots_adjust(bottom=0.2, hspace=0.45)
-#plt.savefig("fd1d_1_5.png")
