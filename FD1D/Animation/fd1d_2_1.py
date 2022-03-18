@@ -80,7 +80,7 @@ with writer.saving(fig, "fd1d_2_1.mp4", 100):
             Dx[k] = Dx[k] + 0.5 * (hy[k - 1] - hy[k])
 
         # put a sinusoidal at the low end
-        Dx[1] = Dx[1] + np.sin(2 * np.pi * freq * dt * time_step)
+        Dx[5] = Dx[5] + np.sin(2 * np.pi * freq * dt * time_step)
 
         # calculate the Ex field from Dx
         for k in range(1, ke):

@@ -6,19 +6,19 @@
 """ Simulation of a pulse striking a dielectric medium and implements
     the discrete Fourier transform with a Gaussian pulse as its source """
 
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-matplotlib.rcParams["text.usetex"] = True
-matplotlib.rcParams["pgf.texsystem"] = "pdflatex"
-matplotlib.rcParams.update(
+plt.style.use("classic")
+plt.rcParams["text.usetex"] = True
+plt.rcParams["pgf.texsystem"] = "pdflatex"
+plt.rcParams.update(
     {
         "font.family": "serif",
-        "font.size": 8,
-        "axes.labelsize": 10,
-        "axes.titlesize": 10,
-        "figure.titlesize": 10,
+        "font.size": 10,
+        "axes.labelsize": 12,
+        "axes.titlesize": 12,
+        "figure.titlesize": 12,
     }
 )
 
@@ -30,7 +30,7 @@ hy = np.zeros(ke)
 
 dx = 0.01   # cell size
 dt = dx / 6e8   # time step size
-freq = np.array((500e6, 200e6, 100e6))  # frequency 500 MHz, 200 MHz, 100 MHz
+freq = np.array((100e6, 200e6, 500e6))  # frequency 100 MHz, 200 MHz, 500 MHz
 nfreq = len(freq)   # number of frequencies
 
 boundary_low = [0, 0]
@@ -87,8 +87,8 @@ for time_step in range(1, nsteps + 1):
     # calculate the Fourier transform of Ex
     for k in range(ke):
         for m in range(nfreq):
-            real_pt[m, k] = real_pt[m, k] + np.cos(2*np.pi * m * dt * time_step) * ex[k]
-            imag_pt[m, k] = imag_pt[m, k] - np.sin(2*np.pi * m * dt * time_step) * ex[k]
+            real_pt[m,k] = real_pt[m,k] + np.cos(2*np.pi*m*dt*time_step) * ex[k]
+            imag_pt[m,k] = imag_pt[m,k] - np.sin(2*np.pi*m*dt*time_step) * ex[k]
 
     # fourier transform of the input pulse
     if time_step < 100:
@@ -109,42 +109,42 @@ for time_step in range(1, nsteps + 1):
     # save data at certain points for plotting
     for plot_data in points:
         if time_step == plot_data["num_steps"]:
+            plot_data["ex"] = np.copy(ex)
 
             # calculate the amplitude and phase at each frequency
             for m in range(nfreq):
                 amp_in[m] = np.sqrt(real_in[m]**2 + imag_in[m]**2)
-                phase_in[m] = np.arctan2(imag_in[m], real_in[m])
+                phase_in[m] = np.arctan2(real_in[m], imag_in[m])
 
                 for k in range(ke):
-                    amp[m, k] = (1/amp_in[m]) * np.sqrt(real_pt[m, k]**2 + imag_pt[m, k]**2)
-                    phase[m, k] = np.arctan2(imag_pt[m, k], real_pt[m, k]) - phase_in[m]
+                    amp[m,k] = (1/amp_in[m])*np.sqrt(real_pt[m,k]**2 + imag_pt[m, k]**2)
+                    phase[m,k] = np.arctan2(real_pt[m,k], imag_pt[m,k]) - phase_in[m]
 
-            plot_data["ex"] = np.copy(ex)
             plot_data["amp"] = np.copy(amp)
             plot_data["phase"] = np.copy(phase)
 
 fig = plt.figure(figsize=(8, 7))
-fig.suptitle(r"The Fourier Transform has been added")
+fig.suptitle(r"Discrete Fourier transform with a Gaussian pulse as its source")
 
 
 def plotting_ex(data, ga, time_step, label_ab):
     """plot of E field at a single time step"""
     ax.plot(data, color="k", linewidth=1)
     ax.plot(-(ga - 1)/0.75, 'k--', linewidth=0.75)
-    ax.set(xlim=(0, 200), ylim=(-1.2, 1.2), ylabel=r"E$_x$")
+    ax.set(xlim=(0, 200), ylim=(-1.2, 1.2), ylabel=r"$E_x$")
     ax.set(xticks=np.arange(0, 220, 20), yticks=np.arange(-1.2, 1.4, 0.5))
-    ax.text(35, 0.3, "Time Domain, T = {}".format(time_step), horizontalalignment="center")
+    ax.text(35, 0.3, "Time domain, T = {}".format(time_step), horizontalalignment="center")
     ax.text(-25, -2.1, label_ab, horizontalalignment="center")
     return
 
 
 def plotting_amp(data, ga, freq, label):
     """plot of the Fourier transform amplitude at a single time step"""
-    ax.plot(data[0], color='k', linewidth=1)
+    ax.plot(data[2], color='k', linewidth=1)
     ax.plot(-(ga - 1)/0.75, 'k--', linewidth=0.75)
-    ax.set(xlim=(0, 200), ylim=(0, 2), xlabel=r"{}".format(label), ylabel=r"Amp")
+    ax.set(xlim=(0, 200), ylim=(0, 2), xlabel=r"{}".format(label), ylabel=r"$Amp$")
     ax.set(xticks=np.arange(0, 220, 20), yticks=np.arange(0, 3, 1))
-    ax.text(150, 1.2, "Freq. Domain at {} MHz".format(int(round(freq[0]/1e6))), horizontalalignment="center")
+    ax.text(150, 1.2, "Freq. domain at {} MHz".format(int(round(freq[2]/1e6))), horizontalalignment="center")
     return
 
 
@@ -157,5 +157,4 @@ for subplot_num, plot_data in enumerate(points, start=0):
 
 
 plt.subplots_adjust(bottom=0.1, hspace=0.45)
-plt.tight_layout()
-plt.savefig("fd1d_2_2.png")
+plt.tight_layout(); plt.savefig("fd1d_2_2.png")
