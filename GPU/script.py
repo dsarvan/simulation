@@ -21,7 +21,7 @@ def benchmark_processor(arr, func, argument):
 array_cpu = np.random.randint(0, 255, size=(9999, 9999))
 
 # load the same matrix to GPU memory
-array_gpu = np.asarray(array_cpu)
+array_gpu = cp.asarray(array_cpu)
 
 # benchmark matrix addition on CPU by using NumPy addition function
 cpu_time = benchmark_processor(array_cpu, np.add, 999)
@@ -30,9 +30,9 @@ cpu_time = benchmark_processor(array_cpu, np.add, 999)
 benchmark_processor(array_gpu, cp.add, 1)
 
 # benchmark matrix addition on GPU by using CuPy addition function
-#gpu_time = benchmark_processor(array_gpu, cp.add, 999)
+gpu_time = benchmark_processor(array_gpu, cp.add, 999)
 
 # determine how much is GPU faster
-#processor = (gpu_time - cpu_time)/gpu_time * 100
+processor = abs((gpu_time - cpu_time)/gpu_time) * 100
 
-#print(f"CPU time: {cpu_time} seconds\nGPU time: {gpu_time} seconds.\nGPU was {processor} percent faster") 
+print(f"CPU time: {cpu_time} seconds\nGPU time: {gpu_time} seconds\nGPU was {processor} percent faster") 
