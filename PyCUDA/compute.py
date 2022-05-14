@@ -27,8 +27,6 @@ for size in range(1, 32):
         print("Error will this is bad")
         sys.exit()
 
-    time_cpu = []
-    time_gpu = []
 
     for n in range(0, 100):
         a = np.random.randn(size_of_x, size_of_y).astype(np.float32)
