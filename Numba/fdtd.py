@@ -6,7 +6,6 @@
 """ Script for 1-dimensional fdtd with gaussian pulse as source """
 
 import numpy as np
-from numba import jit
 import matplotlib.pyplot as plt
 
 plt.style.use("classic")
