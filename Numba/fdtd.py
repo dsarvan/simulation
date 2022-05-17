@@ -9,7 +9,7 @@ import numpy as np
 from numba import jit
 import matplotlib.pyplot as plt
 
-plt.style.use('classic')
+plt.style.use("classic")
 plt.rcParams["text.usetex"] = True
 plt.rcParams["pgf.texsystem"] = "pdflatex"
 plt.rcParams.update(
@@ -24,7 +24,7 @@ plt.rcParams.update(
 
 
 def plotting(time_step, ex, hy):
-    """ plot function """
+    """plot function"""
     fig, (ax1, ax2) = plt.subplots(2)
     fig.suptitle(r"FDTD simulation of a pulse in free space after 100 time steps")
     ax1.plot(ex, "k", lw=1)
@@ -37,16 +37,17 @@ def plotting(time_step, ex, hy):
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
     plt.savefig("fdtd.png")
 
-@profile
+
 def emfield(ke, kc, t0, spread, nsteps):
-    
-    ex = hy = np.zeros(ke)
+
+    ex = np.zeros(ke)
+    hy = np.zeros(ke)
 
     for time_step in range(1, nsteps + 1):
 
         ex[1:ke] = ex[1:ke] + 0.5 * (hy[0:ke-1] - hy[1:ke])
 
-        ex[kc] = np.exp(-0.5 * ((t0 - time_step)/spread)**2)
+        ex[kc] = np.exp(-0.5 * ((t0 - time_step) / spread) ** 2)
 
         hy[0:ke-1] = hy[0:ke-1] + 0.5 * (ex[0:ke-1] - ex[1:ke])
 
@@ -54,11 +55,11 @@ def emfield(ke, kc, t0, spread, nsteps):
 
 
 def main():
-    
+
     ke = 201
 
     # Pulse parameters
-    kc = int(ke/2)
+    kc = int(ke / 2)
     t0 = 40
     spread = 12
     nsteps = 100
@@ -66,5 +67,5 @@ def main():
     emfield(ke, kc, t0, spread, nsteps)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
