@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# File: fdtd.py
+# File: fdtdn.py
 # Name: D.Saravanan
 # Date: 16/05/2022
 
@@ -34,7 +34,8 @@ def plotting(time_step, ex, hy):
     ax2.set(xlim=(0, 200), ylim=(-1.2, 1.2), xlabel=r"FDTD cells", ylabel=r"H$_y$")
     ax2.set(xticks=range(0, 220, 20), yticks=np.arange(-1, 1.2, 1))
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
-    plt.savefig("fdtd.png")
+    plt.savefig("fdtdn.png")
+
 
 def emfield(ke, kc, t0, spread, nsteps):
 
@@ -49,7 +50,7 @@ def emfield(ke, kc, t0, spread, nsteps):
 
         hy[0:ke-1] = hy[0:ke-1] + 0.5 * (ex[0:ke-1] - ex[1:ke])
 
-    plotting(time_step, ex, hy)
+    return time_step, ex, hy
 
 @profile
 def main():
@@ -62,7 +63,8 @@ def main():
     spread = 12
     nsteps = 100
 
-    emfield(ke, kc, t0, spread, nsteps)
+    time_step, ex, hy = emfield(ke, kc, t0, spread, nsteps)
+    plotting(time_step, ex, hy)
 
 
 if __name__ == "__main__":
