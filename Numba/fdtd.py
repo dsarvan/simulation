@@ -36,10 +36,18 @@ def plotting(time_step, ex, hy):
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
     plt.savefig("fdtd.png")
 
-def emfield(ke, kc, t0, spread, nsteps):
 
+def main():
+
+    ke = 201
     ex = np.zeros(ke)
     hy = np.zeros(ke)
+
+    # Pulse parameters
+    kc = int(ke / 2)
+    t0 = 40
+    spread = 12
+    nsteps = 100
 
     for time_step in range(1, nsteps + 1):
 
@@ -50,19 +58,6 @@ def emfield(ke, kc, t0, spread, nsteps):
         hy[0:ke-1] = hy[0:ke-1] + 0.5 * (ex[0:ke-1] - ex[1:ke])
 
     plotting(time_step, ex, hy)
-
-@profile
-def main():
-
-    ke = 201
-
-    # Pulse parameters
-    kc = int(ke / 2)
-    t0 = 40
-    spread = 12
-    nsteps = 100
-
-    emfield(ke, kc, t0, spread, nsteps)
 
 
 if __name__ == "__main__":
