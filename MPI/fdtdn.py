@@ -58,11 +58,9 @@ def main():
             ex[kc] = np.exp(-0.5 * ((t0 - time_step) / spread) ** 2)
             hy[0:ke-1] = hy[0:ke-1] + 0.5 * (ex[0:ke-1] - ex[1:ke])
 
-        #comm.send(ex, dest=rank+1, tag=11)
-        #comm.send(ex, dest=rank+1, tag=12)
 
 
-    #print(ex)
+    print(ex)
 
     plt.plot(ex)
     plt.savefig('fdtdn.png')
