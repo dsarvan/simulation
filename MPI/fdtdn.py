@@ -48,9 +48,14 @@ def main():
         comm.send(ex, dest=rank+1, tag=11)
         comm.send(hy, dest=rank+1, tag=12)
 
-    elif rank == 1:
-        ex = comm.recv(source=rank-1, tag=11)
-        hy = comm.recv(source=rank-1, tag=12)
+
+    for n in range(size):
+        n = n + rank
+
+        print(n)
+
+        ex = comm.recv(source=n-1, tag=11)
+        hy = comm.recv(source=n-1, tag=12)
 
         for time_step in range(start, end + 1):
 
@@ -58,12 +63,13 @@ def main():
             ex[kc] = np.exp(-0.5 * ((t0 - time_step) / spread) ** 2)
             hy[0:ke-1] = hy[0:ke-1] + 0.5 * (ex[0:ke-1] - ex[1:ke])
 
+        comm.send(ex, dest=n+1, tag=11)
+        comm.send(hy, dest=n+1, tag=11)
 
+    #print(ex)
 
-    print(ex)
-
-    plt.plot(ex)
-    plt.savefig('fdtdn.png')
+    #plt.plot(ex)
+    #plt.savefig('fdtdn.png')
 
 
 if __name__ == "__main__":
