@@ -7,7 +7,15 @@
 
 import tkinter as tk
 
+# create Tk object for root window of the application
 root = tk.Tk()
+
 root.title("FTDT")
+root.geometry("800x600")
 root.resizable(False, False)
+
+label = tk.Label(root, text="Computational Electrodynamics")
+input = tk.Entry(root)
+
+# start event loop (infinite loop)
 root.mainloop()
