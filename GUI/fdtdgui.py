@@ -12,18 +12,18 @@ root = tk.Tk()
 
 root.title("FTDT")
 root.geometry("800x600")
-#root.configure(bg="white")
 root.resizable(False, False)
 root.rowconfigure(index=2, weight=1)
 root.columnconfigure(index=1, weight=1)
 
+# Processing unit
 process_label = tk.Label(root, text="Processing: ")
 process_input = tk.Entry(root)
 
 process_label.grid(row=0, column=0, sticky=tk.E + tk.W, padx=5, pady=5)
 process_input.grid(row=0, column=1, sticky=tk.E + tk.W)
 
-
+# Dimension selection
 dimensions = ["One-Dimensional Simulation", "Two-Dimensional Simulation", "Three-Dimensioanl Simulation"] 
 dimensions_label = tk.Label(root, text="Dimensions: ")
 dimensions_input = tk.Listbox(root, height=1)
