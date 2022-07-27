@@ -41,5 +41,18 @@ message_input.grid(row=2, column=0, columnspan=2, sticky="news", pady=5)
 start_button = tk.Button(root, text="Start")
 start_button.grid(row=10, column=1, sticky=tk.E, padx=5, pady=5)
 
+
+def applicationInfo():
+
+    process = process_input.get()
+    dimension = dimensions_input.curselection()
+    message = message_input.get("1.0", tk.END)
+
+    filename = f"{process}_{dimension}.txt"
+
+    with open(filename, "w") as fh:
+        fh.write(message)
+
+
 # start event loop (infinite loop)
 root.mainloop()
