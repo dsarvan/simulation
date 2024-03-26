@@ -1,0 +1,29 @@
+# Matplotlib style for plotting
+
+axes.grid : True
+axes.axisbelow : True
+axes.labelsize : 12
+axes.titlesize : 12
+
+figure.dpi : 600
+figure.titlesize : 12
+
+font.family : serif
+font.serif : Times
+font.weight : normal
+font.size : 10
+
+grid.alpha : 0.5
+grid.color : black
+grid.linestyle : --
+grid.linewidth : 0.5
+
+legend.frameon : False
+
+pgf.texsystem : pdflatex
+
+xtick.direction : inout
+ytick.direction : inout
+
+text.usetex : True
+text.latex.preamble : \usepackage{amsmath} \usepackage{amssymb} \usepackage{sfmath} \usepackage[T1]{fontenc} \usepackage{pgfplots}
