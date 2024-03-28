@@ -1,17 +1,17 @@
 # Matplotlib style for plotting
 
-axes.grid : True
+axes.grid : False
 axes.axisbelow : True
-axes.labelsize : 12
-axes.titlesize : 12
+axes.labelsize : 10
+axes.titlesize : 10
 
-figure.dpi : 600
-figure.titlesize : 12
+figure.dpi : 80
+figure.titlesize : 10
 
 font.family : serif
 font.serif : Times
 font.weight : normal
-font.size : 10
+font.size : 8
 
 grid.alpha : 0.5
 grid.color : black
@@ -23,7 +23,10 @@ legend.frameon : False
 pgf.texsystem : pdflatex
 
 xtick.direction : inout
+xtick.top : False
+
 ytick.direction : inout
+ytick.right : False
 
 text.usetex : True
-text.latex.preamble : \usepackage{amsmath} \usepackage{amssymb} \usepackage{sfmath} \usepackage[T1]{fontenc} \usepackage{pgfplots}
+text.latex.preamble : \usepackage{amsmath} \usepackage{amssymb} \usepackage[T1]{fontenc} \usepackage{pgfplots}
