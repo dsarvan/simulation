@@ -59,7 +59,7 @@ def simulate(ke: int, ex: np.ndarray, hy: np.ndarray) -> tuple[np.ndarray, np.nd
 
     """
 
-    kc: int = ke // 2
+    kc: int = ke//2
     nsteps: int = 100
 
     # FDTD simulation loop
