@@ -17,9 +17,9 @@ def visualize(ex: np.ndarray, hy: np.ndarray) -> None:
     """Data visualization with Matplotlib"""
 
     fig, (ax1, ax2) = plt.subplots(2, sharex=False, gridspec_kw={"hspace": 0.2})
-    fig.suptitle(r"FDTD simulation of a pulse in free space after 250 time steps")
+    fig.suptitle(r"FDTD simulation of a pulse in free space after 260 time steps")
     ax1.plot(ex, "k", lw=1)
-    ax1.text(100, 0.5, "T = 250", horizontalalignment="center")
+    ax1.text(100, 0.5, "T = 260", horizontalalignment="center")
     ax1.set(xlim=(0, 200), ylim=(-1.2, 1.2), ylabel=r"E$_x$")
     ax1.set(xticks=range(0, 220, 20), yticks=np.arange(-1, 1.2, 1))
     ax2.plot(hy, "k", lw=1)
@@ -59,7 +59,7 @@ def simulate(ke: int, ex: np.ndarray, hy: np.ndarray) -> tuple[np.ndarray, np.nd
     """
 
     kc: int = ke//2
-    nsteps: int = 250
+    nsteps: int = 260
 
     lbound, hbound = [0, 0], [0, 0]
 
