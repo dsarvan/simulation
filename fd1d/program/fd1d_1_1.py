@@ -80,11 +80,7 @@ def simulate(ke: int, ex: np.ndarray, hy: np.ndarray) -> tuple[np.ndarray, np.nd
 def main():
     """Main function"""
 
-<<<<<<< HEAD
-    ke = 200
-=======
     ke = 201
->>>>>>> develop
     ex = np.zeros(ke, dtype=np.float64)
     hy = np.zeros(ke, dtype=np.float64)
 
