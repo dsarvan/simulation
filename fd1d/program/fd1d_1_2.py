@@ -4,83 +4,94 @@
 # Date: 19/10/2021
 
 """ Simulation of a pulse with absorbing boundary conditions """
+# Notice that the pulse is absorded at the edges without reflecting anything back.
 
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-matplotlib.rcParams["text.usetex"] = True
-matplotlib.rcParams["pgf.texsystem"] = "pdflatex"
-matplotlib.rcParams.update(
-    {
-        "font.family": "serif",
-        "font.size": 8,
-        "axes.labelsize": 10,
-        "axes.titlesize": 10,
-        "figure.titlesize": 10,
-    }
-)
-
-ke = 201
-ex = np.zeros(ke)
-hy = np.zeros(ke)
-
-# Pulse parameters
-kc = int(ke / 2)
-t0 = 40
-spread = 12
-nsteps = 250
-
-boundary_low = [0, 0]
-boundary_high = [0, 0]
-
-# desired points for plotting
-points = [
-    {"num_steps": 100, "data": None, "label": " "},
-    {"num_steps": 225, "data": None, "label": " "},
-    {"num_steps": 250, "data": None, "label": "FDTD cells"},
-]
-
-# FDTD loop
-for time_step in range(1, nsteps + 1):
-
-    # calculate the Ex field
-    for k in range(1, ke):
-        ex[k] = ex[k] + 0.5 * (hy[k - 1] - hy[k])
-
-    # put a Gaussian pulse in the middle
-    ex[kc] = np.exp(-0.5 * ((t0 - time_step) / spread) ** 2)
-
-    # absorbing boundary conditions
-    ex[0] = boundary_low.pop(0)
-    boundary_low.append(ex[1])
-    ex[ke - 1] = boundary_high.pop(0)
-    boundary_high.append(ex[ke - 2])
-
-    # calculate the Hy field
-    for k in range(ke - 1):
-        hy[k] = hy[k] + 0.5 * (ex[k] - ex[k + 1])
-
-    # save data at certain points for plotting
-    for plot_data in points:
-        if time_step == plot_data["num_steps"]:
-            plot_data["data"] = np.copy(ex)
-
-fig = plt.figure(figsize=(8, 5.25))
-fig.suptitle(r"FDTD simulation with absorbing boundary conditions")
+plt.style.use("classic")
+plt.style.use("../pyplot.mplstyle")
 
 
-def plotting(data, timestep, label):
-    """plot of E field at a single time step"""
-    ax.plot(data, color="k", linewidth=1)
-    ax.set(xlim=(0, 200), ylim=(-0.2, 1.2), xlabel=r"{}".format(label), ylabel=r"E$_x$")
-    ax.set(xticks=np.arange(0, 220, 20), yticks=np.arange(0, 1.2, 1))
-    ax.text(100, 0.5, "T = {}".format(timestep), horizontalalignment="center")
+def visualize(ex: np.ndarray, hy: np.ndarray) -> None:
+    """Data visualization with Matplotlib"""
+
+    fig, (ax1, ax2) = plt.subplots(2, sharex=False, gridspec_kw={"hspace": 0.2})
+    fig.suptitle(r"FDTD simulation of a pulse in free space after 250 time steps")
+    ax1.plot(ex, "k", lw=1)
+    ax1.text(100, 0.5, "T = 250", horizontalalignment="center")
+    ax1.set(xlim=(0, 200), ylim=(-1.2, 1.2), ylabel=r"E$_x$")
+    ax1.set(xticks=range(0, 220, 20), yticks=np.arange(-1, 1.2, 1))
+    ax2.plot(hy, "k", lw=1)
+    ax2.set(xlim=(0, 200), ylim=(-1.2, 1.2), xlabel=r"FDTD cells", ylabel=r"H$_y$")
+    ax2.set(xticks=range(0, 220, 20), yticks=np.arange(-1, 1.2, 1))
+    plt.subplots_adjust(bottom=0.2, hspace=0.45)
+    plt.savefig("fd1d_1_2.png")
 
 
-for subplot_num, plot_data in enumerate(points):
-    ax = fig.add_subplot(3, 1, subplot_num + 1)
-    plotting(plot_data["data"], plot_data["num_steps"], plot_data["label"])
+def gaussian(t: int, t0: int = 40, sigma: float = 12) -> float:
+    """
+    Gaussian pulse source
 
-plt.tight_layout()
-plt.savefig("fd1d_1_2.png")
+    :param int t: an integer counter that serves as the temporal index
+    :param int t0: time step at which gaussian function is maximum, default 40
+    :param float sigma: width of the gaussian pulse, default 12
+
+    :return: gaussian pulse
+    :rtype: float
+
+    """
+
+    return np.exp(-0.5 * ((t - t0) / sigma) ** 2)
+
+
+def simulate(ke: int, ex: np.ndarray, hy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Finite-difference time-domain method
+
+    :param int ke: number of electric and magnetic field nodes
+    :param np.ndarray ex: electric field oriented in the x direction
+    :param np.ndarray hy: magnetic field oriented in the y direction
+
+    :return: ex, hy: electric and magnetic field
+    :rtype: tuple[np.ndarray, np.ndarray]
+
+    """
+
+    kc: int = ke//2
+    nsteps: int = 250
+
+    lbound, hbound = [0, 0], [0, 0]
+
+    # FDTD simulation loop
+    for t in range(1, nsteps + 1):
+
+        # calculate the Ex field
+        ex[1:ke] = ex[1:ke] + 0.5 * (hy[0:ke-1] - hy[1:ke])
+
+        # put a Gaussian pulse in the middle
+        ex[kc] = gaussian(t, 40, 12)
+
+        # absorbing boundary conditions
+        ex[0], lbound[0], lbound[1] = lbound[0], lbound[1], ex[1]
+        ex[ke-1], hbound[0], hbound[1] = hbound[0], hbound[1], ex[ke-2]
+
+        # calculate the Hy field
+        hy[0:ke-1] = hy[0:ke-1] + 0.5 * (ex[0:ke-1] - ex[1:ke])
+
+    return ex, hy
+
+
+def main():
+    """Main function"""
+
+    ke = 201
+    ex = np.zeros(ke, dtype=np.float64)
+    hy = np.zeros(ke, dtype=np.float64)
+
+    ex, hy = simulate(ke, ex, hy)
+    visualize(ex, hy)
+
+
+if __name__ == "__main__":
+    main()
