@@ -38,14 +38,14 @@ def field(t: int, nx: int, ex: np.ndarray, hy: np.ndarray):
     t0: int = 40
     sigma: float = 12.0
 
+    # calculate the Hy field
+    hy[0:nx-1] = hy[0:nx-1] + 0.5 * (ex[0:nx-1] - ex[1:nx])
+
     # calculate the Ex field
     ex[1:nx] = ex[1:nx] + 0.5 * (hy[0:nx-1] - hy[1:nx])
 
     # put a Gaussian pulse in the middle
     ex[cx] = gaussian(t, t0, sigma)
-
-    # calculate the Hy field
-    hy[0:nx-1] = hy[0:nx-1] + 0.5 * (ex[0:nx-1] - ex[1:nx])
 
 
 def main():
