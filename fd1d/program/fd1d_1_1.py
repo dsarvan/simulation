@@ -34,10 +34,6 @@ def gaussian(t: int, t0: int, sigma: float) -> float:
 
 def field(t: int, nx: int, ex: np.ndarray, hy: np.ndarray):
 
-    cx: int = int(nx/2)
-    t0: int = 40
-    sigma: float = 12.0
-
     # calculate the Hy field
     hy[0:nx-1] = hy[0:nx-1] + 0.5 * (ex[0:nx-1] - ex[1:nx])
 
@@ -45,7 +41,7 @@ def field(t: int, nx: int, ex: np.ndarray, hy: np.ndarray):
     ex[1:nx] = ex[1:nx] + 0.5 * (hy[0:nx-1] - hy[1:nx])
 
     # put a Gaussian pulse in the middle
-    ex[cx] = gaussian(t, t0, sigma)
+    ex[nx//2] = gaussian(t, 40, 12)
 
 
 def main():
@@ -53,8 +49,8 @@ def main():
     nx: int = 201
     ns: int = 100
 
-    ex: np.ndarray = np.zeros(nx, dtype=np.float64)
-    hy: np.ndarray = np.zeros(nx, dtype=np.float64)
+    ex = np.zeros(nx, dtype=np.float64)
+    hy = np.zeros(nx, dtype=np.float64)
 
     for t in range(1, ns+1):
         field(t, nx, ex, hy)
