@@ -43,10 +43,6 @@ __global__ void field(int t, int nx, float *ex, float *hy) {
 	int index = blockIdx.x * blockDim.x + threadIdx.x;
 	int stride = blockDim.x * gridDim.x;
 
-	int cx = nx/2;
-	int t0 = 40;
-	float sigma = 12.0;
-
 	for (int idx = index; idx < nx - 1; idx += stride)
 		hy[idx] = hy[idx] + 0.5 * (ex[idx] - ex[idx + 1]);
 
@@ -57,18 +53,18 @@ __global__ void field(int t, int nx, float *ex, float *hy) {
 
 	__syncthreads();
 
-	ex[cx] = gaussian(t, t0, sigma);
+	ex[nx/2] = gaussian(t, 40, 12);
 }
 """
 
 
 def main():
 
-	nx = np.int32(200)
+	nx = np.int32(201)
+	ns = np.int32(100)
+
 	ex = gpuarray.to_gpu(np.zeros(nx, dtype=np.float32))
 	hy = gpuarray.to_gpu(np.zeros(nx, dtype=np.float32))
-
-	ns: int = np.int32(100)
 
 	blockDimx = 256
 	gridDimx = int((nx + blockDimx - 1) / blockDimx)
