@@ -21,7 +21,7 @@ plt.style.use("../pyplot.mplstyle")
 
 def visualize(ns: int, nx: int, ex: np.ndarray, hy: np.ndarray) -> None:
 	fig, (ax1, ax2) = plt.subplots(2, sharex=False, gridspec_kw={"hspace": 0.2})
-	fig.suptitle(f"FDTD simulation of a pulse in free space after {ns} time steps")
+	fig.suptitle(r"FDTD simulation of a pulse in free space")
 	ax1.plot(ex, "k", lw=1)
 	ax1.text(nx/2, 0.5, f"T = {ns}", horizontalalignment="center")
 	ax1.set(xlim=(0, nx-1), ylim=(-1.2, 1.2), ylabel=r"$E_x$")
@@ -67,13 +67,13 @@ def main():
 	hy = gpuarray.to_gpu(np.zeros(nx, dtype=np.float32))
 
 	blockDimx = 256
-	gridDimx = int((nx + blockDimx - 1) / blockDimx)
+	gridDimx = int((nx + blockDimx - 1)/blockDimx)
 
 	mod = SourceModule(kernel)
 	field = mod.get_function("field")
 
 	for t in range(1, ns+1):
-		field(np.int32(t), nx, ex, hy, grid=(gridDimx, 1), block=(blockDimx, 1, 1))
+		field(np.int32(t), nx, ex, hy, grid=(gridDimx,1), block=(blockDimx,1,1))
 
 	drv.Context.synchronize()
 
