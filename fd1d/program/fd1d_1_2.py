@@ -33,7 +33,7 @@ def gaussian(t: int, t0: int, sigma: float) -> float:
 	return np.exp(-0.5 * ((t - t0)/sigma)**2)
 
 
-def field(t: int, nx: int, ex: np.ndarray, hy: np.ndarray, lb: np.ndarray, hb: np.ndarray):
+def field(t: int, nx: int, ex: np.ndarray, hy: np.ndarray, bc: np.ndarray):
 	# calculate the Hy field
 	hy[0:nx-1] = hy[0:nx-1] + 0.5 * (ex[0:nx-1] - ex[1:nx])
 	# calculate the Ex field
@@ -41,8 +41,8 @@ def field(t: int, nx: int, ex: np.ndarray, hy: np.ndarray, lb: np.ndarray, hb: n
 	# put a Gaussian pulse in the middle
 	ex[nx//2] = gaussian(t, 40, 12)
 	# absorbing boundary conditions
-	ex[0], lb[0], lb[1] = lb[0], lb[1], ex[1]
-	ex[nx-1], hb[0], hb[1] = hb[0], hb[1], ex[nx-2]
+	ex[0], bc[0], bc[1] = bc[0], bc[1], ex[1]
+	ex[nx-1], bc[3], bc[2] = bc[3], bc[2], ex[nx-2]
 
 
 def main():
@@ -53,11 +53,10 @@ def main():
 	ex = np.zeros(nx, dtype=np.float64)
 	hy = np.zeros(nx, dtype=np.float64)
 
-	lb = np.zeros(2, dtype=np.float64)
-	hb = np.zeros(2, dtype=np.float64)
+	bc = np.zeros(4, dtype=np.float64)
 
 	for t in range(1, ns+1):
-		field(t, nx, ex, hy, lb, hb)
+		field(t, nx, ex, hy, bc)
 
 	visualize(ns, nx, ex, hy)
 
