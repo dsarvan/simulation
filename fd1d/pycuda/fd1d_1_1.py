@@ -43,13 +43,13 @@ __global__ void field(int t, int nx, float *ex, float *hy) {
 	int index = blockIdx.x * blockDim.x + threadIdx.x;
 	int stride = blockDim.x * gridDim.x;
 
-	for (int idx = index; idx < nx - 1; idx += stride)
-		hy[idx] = hy[idx] + 0.5 * (ex[idx] - ex[idx + 1]);
+	for (int i = index; i < nx - 1; i += stride)
+		hy[i] = hy[i] + 0.5 * (ex[i] - ex[i+1]);
 
 	__syncthreads();
 
-	for (int idx = index + 1; idx < nx; idx += stride)
-		ex[idx] = ex[idx] + 0.5 * (hy[idx - 1] - hy[idx]);
+	for (int i = index + 1; i < nx; i += stride)
+		ex[i] = ex[i] + 0.5 * (hy[i-1] - hy[i]);
 
 	__syncthreads();
 
