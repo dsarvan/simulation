@@ -40,24 +40,24 @@ __device__ float gaussian(int t, int t0, float sigma) {
 }
 
 
-__global__ void field(int t, int nx, float *ex, float *hy, float *lb, float *hb) {
+__global__ void field(int t, int nx, float *ex, float *hy, float *bc) {
 	int index = blockIdx.x * blockDim.x + threadIdx.x;
 	int stride = blockDim.x * gridDim.x;
 
-	for (int idx = index; idx < nx - 1; idx += stride)
-		hy[idx] = hy[idx] + 0.5 * (ex[idx] - ex[idx + 1]);
+	for (int i = index; i < nx - 1; i += stride)
+		hy[i] = hy[i] + 0.5 * (ex[i] - ex[i+1]);
 
 	__syncthreads();
 
-	for (int idx = index + 1; idx < nx; idx += stride)
-		ex[idx] = ex[idx] + 0.5 * (hy[idx - 1] - hy[idx]);
+	for (int i = index + 1; i < nx; i += stride)
+		ex[i] = ex[i] + 0.5 * (hy[i-1] - hy[i]);
 
 	__syncthreads();
 
 	ex[nx/2] = gaussian(t, 40, 12);
 
-	ex[0] = lb[0], lb[0] = lb[1], lb[1] = ex[1];
-	ex[nx-1] = hb[0], hb[0] = hb[1], hb[1] = ex[nx-2];
+	ex[0] = bc[0], bc[0] = bc[1], bc[1] = ex[1];
+	ex[nx-1] = bc[3], bc[3] = bc[2], bc[2] = ex[nx-2];
 }
 """
 
@@ -70,8 +70,7 @@ def main():
 	ex = gpuarray.to_gpu(np.zeros(nx, dtype=np.float32))
 	hy = gpuarray.to_gpu(np.zeros(nx, dtype=np.float32))
 
-	lb = gpuarray.to_gpu(np.zeros(2, dtype=np.float32))
-	hb = gpuarray.to_gpu(np.zeros(2, dtype=np.float32))
+	bc = gpuarray.to_gpu(np.zeros(4, dtype=np.float32))
 
 	blockDimx = 256
 	gridDimx = int((nx + blockDimx - 1)/blockDimx)
@@ -83,7 +82,7 @@ def main():
 	blockDim = (blockDimx,1,1)
 
 	for t in range(1, ns+1):
-		field(np.int32(t), nx, ex, hy, lb, hb, grid=gridDim, block=blockDim)
+		field(np.int32(t), nx, ex, hy, bc, grid=gridDim, block=blockDim)
 
 	drv.Context.synchronize()
 
