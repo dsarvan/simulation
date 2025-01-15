@@ -9,7 +9,6 @@ figure.dpi : 100
 figure.titlesize : 12
 
 font.family : serif
-font.serif : Times
 font.weight : normal
 font.size : 10
 
