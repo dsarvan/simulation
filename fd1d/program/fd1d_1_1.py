@@ -3,9 +3,7 @@
 # Name: D.Saravanan
 # Date: 11/10/2021
 
-""" Simulation in free space """
-# FDTD simulation of a pulse in free space after 100 steps.
-# The pulse originated in the center and travels outward.
+""" Simulation of a pulse in free space """
 
 import matplotlib.pyplot as plt
 import numpy as np
