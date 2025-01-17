@@ -4,9 +4,6 @@
 # Date: 19/10/2021
 
 """ Simulation of a pulse with absorbing boundary conditions """
-# FDTD simulation of a pulse in free space after 260 steps.
-# The pulse originated in the center and travels outward.
-# Notice that the pulse is absorded at the edges without reflecting anything back.
 
 import matplotlib.pyplot as plt
 import numpy as np
