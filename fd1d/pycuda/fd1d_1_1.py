@@ -3,9 +3,7 @@
 # Name: D.Saravanan
 # Date: 11/10/2021
 
-""" Simulation in free space """
-# FDTD simulation of a pulse in free space after 100 steps.
-# The pulse originated in the center and travels outward.
+""" Simulation of a pulse in free space """
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -43,16 +41,19 @@ __global__ void field(int t, int nx, float *ex, float *hy) {
 	int index = blockIdx.x * blockDim.x + threadIdx.x;
 	int stride = blockDim.x * gridDim.x;
 
+	/* calculate the Hy field */
 	for (int i = index; i < nx - 1; i += stride)
 		hy[i] = hy[i] + 0.5 * (ex[i] - ex[i+1]);
 
 	__syncthreads();
 
+	/* calculate the Ex field */
 	for (int i = index + 1; i < nx; i += stride)
 		ex[i] = ex[i] + 0.5 * (hy[i-1] - hy[i]);
 
 	__syncthreads();
 
+	/* put a Gaussian pulse in the middle */
 	ex[nx/2] = gaussian(t, 40, 12);
 }
 """
