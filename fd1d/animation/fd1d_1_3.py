@@ -56,16 +56,16 @@ def main():
 	# draw an empty plot, but preset the plot x- and y- limits
 	fig, (ax1, ax2) = plt.subplots(2, sharex=False, gridspec_kw={"hspace": 0.2})
 	fig.suptitle(r"FDTD simulation of a pulse striking dielectric material")
-	medium = (0.5/cb - 1)/3
+	medium = (0.5/cb - 1)/(epsr - 1)
 	medium[medium==0] = -1.5
 	line1, = ax1.plot(ex, "k", lw=1)
-	ax1.plot(medium, 'k--', lw=0.75)
+	ax1.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
 	time_text = ax1.text(0.02, 0.90, "", transform=ax1.transAxes)
 	epsr_txt1 = ax1.text(0.80, 0.80, "", transform=ax1.transAxes)
 	ax1.set(xlim=(0, nx-1), ylim=(-1.2, 1.2), ylabel=r"$E_x$")
 	ax1.set(xticks=range(0, nx+1, round(nx//10,-1)), yticks=np.arange(-1, 1.2, 1))
 	line2, = ax2.plot(hy, "k", lw=1)
-	ax2.plot(medium, 'k--', lw=0.75)
+	ax2.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
 	epsr_txt2 = ax2.text(0.80, 0.80, "", transform=ax2.transAxes)
 	ax2.set(xlim=(0, nx-1), ylim=(-1.2, 1.2), xlabel=r"FDTD cells", ylabel=r"$H_y$")
 	ax2.set(xticks=range(0, nx+1, round(nx//10,-1)), yticks=np.arange(-1, 1.2, 1))
