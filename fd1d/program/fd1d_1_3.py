@@ -15,7 +15,7 @@ plt.style.use("../pyplot.mplstyle")
 def visualize(ns: int, nx: int, epsr: int, cb: np.ndarray, ex: np.ndarray, hy: np.ndarray) -> None:
 	fig, (ax1, ax2) = plt.subplots(2, sharex=False, gridspec_kw={"hspace": 0.2})
 	fig.suptitle(r"FDTD simulation of a pulse striking dielectric material")
-	medium = (0.5/cb - 1)/(epsr - 1)
+	medium = (0.5/cb - 1)/(epsr - 1) if epsr > 1 else (0.5/cb - 1)
 	medium[medium==0] = -1.5
 	ax1.plot(ex, "k", lw=1)
 	ax1.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
