@@ -58,7 +58,7 @@ __global__ void field(int t, int nx, float *cb, float *ex, float *hy, float *bc)
 
 	__syncthreads();
 
-	/* put a Gaussian pulse in the middle */
+	/* put a Gaussian pulse at the low end */
 	ex[1] = ex[1] + gaussian(t, 40, 12);
 
 	/* absorbing boundary conditions */
