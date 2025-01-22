@@ -6,89 +6,73 @@
 """ Simulation of a propagating sinusoidal wave of 700 MHz
 striking a medium with a relative dielectric constant of 4 """
 
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-matplotlib.rcParams["text.usetex"] = True
-matplotlib.rcParams["pgf.texsystem"] = "pdflatex"
-matplotlib.rcParams.update(
-    {
-        "font.family": "serif",
-        "font.size": 8,
-        "axes.labelsize": 10,
-        "axes.titlesize": 10,
-        "figure.titlesize": 10,
-    }
-)
-
-ke = 201
-ex = np.zeros(ke)
-hy = np.zeros(ke)
-
-dx = 0.01  # Cell size
-dt = dx / 6e8  # Time step size
-freq = 700e6  # Frequency 700 MHz
-
-boundary_low = [0, 0]
-boundary_high = [0, 0]
-
-# Create Dielectric Profile
-epsilon = 4
-cb = np.ones(ke)
-cb = 0.5 * cb
-cb[100:] = 0.5 / epsilon
-
-nsteps = 425
-
-# desired points for plotting
-points = [
-    {"num_steps": 150, "data": None, "label": " "},
-    {"num_steps": 425, "data": None, "label": "FDTD cells"},
-]
-
-# FDTD loop
-for time_step in range(1, nsteps + 1):
-
-    # calculate the Ex field
-    for k in range(1, ke):
-        ex[k] = ex[k] + cb[k] * (hy[k - 1] - hy[k])
-
-    # put a sinusoidal at the low end
-    ex[5] = ex[5] + np.sin(2 * np.pi * freq * dt * time_step)
-
-    # absorbing boundary conditions
-    ex[0] = boundary_low.pop(0)
-    boundary_low.append(ex[1])
-    ex[ke - 1] = boundary_high.pop(0)
-    boundary_high.append(ex[ke - 2])
-
-    # calculate the Hy field
-    for k in range(ke - 1):
-        hy[k] = hy[k] + 0.5 * (ex[k] - ex[k + 1])
-
-    # save data at certain points for plotting
-    for plot_data in points:
-        if time_step == plot_data["num_steps"]:
-            plot_data["data"] = np.copy(ex)
-
-fig = plt.figure(figsize=(8, 3.5))
-fig.suptitle(r"FDTD simulation of a sinusoidal hitting a dielectric medium")
+plt.style.use("classic")
+plt.style.use("../pyplot.mplstyle")
 
 
-def plotting(data, timestep, label):
-    """plot of E field at a single time step"""
-    ax.plot(data, color="k", linewidth=1)
-    ax.plot((0.5 / cb - 1) / 3, "k--", linewidth=0.75)
-    ax.set(xlim=(0, 200), ylim=(-1.2, 1.2), xlabel=r"{}".format(label), ylabel=r"E$_x$")
-    ax.set(xticks=np.arange(0, 220, 20), yticks=np.arange(-1, 1.2, 1))
-    ax.text(50, 0.5, "T = {}".format(timestep), horizontalalignment="center")
-    ax.text(170, 0.5, "Eps = {}".format(epsilon), horizontalalignment="center")
+def visualize(ns: int, nx: int, epsr: int, cb: np.ndarray, ex: np.ndarray, hy: np.ndarray) -> None:
+	fig, (ax1, ax2) = plt.subplots(2, sharex=False, gridspec_kw={"hspace": 0.2})
+	fig.suptitle(r"FDTD simulation of a sinusoidal wave striking dielectric material")
+	medium = (0.5/cb - 1)/(epsr - 1) if epsr > 1 else (0.5/cb - 1)
+	medium[medium==0] = -1.5
+	ax1.plot(ex, "k", lw=1)
+	ax1.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
+	ax1.text(nx/4, 0.5, f"T = {ns}", horizontalalignment="center")
+	ax1.text(3*nx/4, 0.5, f"epsr = {epsr}", horizontalalignment="center")
+	ax1.set(xlim=(0, nx-1), ylim=(-1.2, 1.2), ylabel=r"$E_x$")
+	ax1.set(xticks=range(0, nx+1, round(nx//10,-1)), yticks=np.arange(-1, 1.2, 1))
+	ax2.plot(hy, "k", lw=1)
+	ax2.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
+	ax2.set(xlim=(0, nx-1), ylim=(-1.2, 1.2), xlabel=r"FDTD cells", ylabel=r"$H_y$")
+	ax2.set(xticks=range(0, nx+1, round(nx//10,-1)), yticks=np.arange(-1, 1.2, 1))
+	plt.subplots_adjust(bottom=0.2, hspace=0.45)
+	plt.savefig("fd1d_1_4.png")
 
 
-for subplot_num, plot_data in enumerate(points):
-    ax = fig.add_subplot(2, 1, subplot_num + 1)
-    plotting(plot_data["data"], plot_data["num_steps"], plot_data["label"])
+def sinusoidal(t: int, ddx: float = 0.01, freq: float = 700e6) -> float:
+	dt: float = ddx/6e8  # time step
+	return np.sin(2 * np.pi * freq * dt * t)
 
-plt.subplots_adjust(bottom=0.2, hspace=0.45)
-plt.savefig("fd1d_1_4.png")
+
+def field(t: int, nx: int, cb: np.ndarray, ex: np.ndarray, hy: np.ndarray, bc: np.ndarray):
+	# calculate the Hy field
+	hy[0:nx-1] = hy[0:nx-1] + 0.5 * (ex[0:nx-1] - ex[1:nx])
+	# calculate the Ex field
+	ex[1:nx] = ex[1:nx] + cb[1:nx] * (hy[0:nx-1] - hy[1:nx])
+	# put a sinusoidal wave at the low end
+	ex[1] = ex[1] + sinusoidal(t, 0.01, 700e6)
+	# absorbing boundary conditions
+	ex[0], bc[0], bc[1] = bc[0], bc[1], ex[1]
+	ex[nx-1], bc[3], bc[2] = bc[3], bc[2], ex[nx-2]
+
+
+def dielectric(nx: int, epsr: float = 1) -> np.ndarray:
+	cb = 0.5 * np.ones(nx, dtype=np.float64)
+	cb[nx//2:] = 0.5/epsr
+	return cb
+
+
+def main():
+
+	nx: int = 1024
+	ns: int = 1500
+
+	ex = np.zeros(nx, dtype=np.float64)
+	hy = np.zeros(nx, dtype=np.float64)
+
+	bc = np.zeros(4, dtype=np.float64)
+
+	epsr: float = 4 # relative permittivity
+	cb: np.ndarray = dielectric(nx, epsr)
+
+	for t in range(1, ns+1):
+		field(t, nx, cb, ex, hy, bc)
+
+	visualize(ns, nx, epsr, cb, ex, hy)
+
+
+if __name__ == "__main__":
+	main()
