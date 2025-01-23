@@ -3,84 +3,84 @@
 # Name: D.Saravanan
 # Date: 29/10/2021
 
-""" Simulation of a sinusoidal wave hitting a lossy dielectric """
+""" Simulation of a propagating sinusoidal wave of 700 MHz striking a lossy
+dielectric with a dielectric constant of 4 and conductivity of 0.04 (S/m) """
 
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
-matplotlib.rcParams["text.usetex"] = True
-matplotlib.rcParams["pgf.texsystem"] = "pdflatex"
-matplotlib.rcParams.update(
-    {
-        "font.family": "serif",
-        "font.size": 8,
-        "axes.labelsize": 10,
-        "axes.titlesize": 10,
-        "figure.titlesize": 10,
-    }
-)
+plt.style.use("classic")
+plt.style.use("../pyplot.mplstyle")
 
-ke = 201
-ex = np.zeros(ke)
-hy = np.zeros(ke)
 
-dx = 0.01  # cell size
-dt = dx / 6e8  # time step size
-freq = 700e6  # frequency 700 MHz
+def visualize(ns: int, nx: int, epsr: float, sigma: float, cb: np.ndarray, ex: np.ndarray, hy: np.ndarray) -> None:
+	fig, (ax1, ax2) = plt.subplots(2, sharex=False, gridspec_kw={"hspace": 0.2})
+	fig.suptitle(r"FDTD simulation of a sinusoidal wave striking lossy dielectric")
+	medium = (0.5/cb - 1)/(epsr - 1) if epsr > 1 else (0.5/cb - 1)
+	medium[medium==0] = -1.5
+	ax1.plot(ex, "k", lw=1)
+	ax1.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
+	ax1.text(nx/4, 0.5, f"T = {ns}", horizontalalignment="center")
+	ax1.text(3*nx/4, 0.5, f"epsr = {epsr}", horizontalalignment="center")
+	ax1.text(3*nx/4, -0.5, rf"$\sigma$ = {sigma}", horizontalalignment="center")
+	ax1.set(xlim=(0, nx-1), ylim=(-1.2, 1.2), ylabel=r"$E_x$")
+	ax1.set(xticks=range(0, nx+1, round(nx//10,-1)), yticks=np.arange(-1, 1.2, 1))
+	ax2.plot(hy, "k", lw=1)
+	ax2.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
+	ax2.set(xlim=(0, nx-1), ylim=(-1.2, 1.2), xlabel=r"FDTD cells", ylabel=r"$H_y$")
+	ax2.set(xticks=range(0, nx+1, round(nx//10,-1)), yticks=np.arange(-1, 1.2, 1))
+	plt.subplots_adjust(bottom=0.2, hspace=0.45)
+	plt.savefig("fd1d_1_5.png")
 
-boundary_low = [0, 0]
-boundary_high = [0, 0]
 
-# Create Dielectric Profile
-epsz = 8.854e-12  # vacuum permittivity (F/m)
-epsilon = 4  # relative permittivity
-sigma = 0.04  # conductivity (S/m)
+def sinusoidal(t: int, ddx: float = 0.01, freq: float = 700e6) -> float:
+	dt: float = ddx/6e8  # time step
+	return np.sin(2 * np.pi * freq * dt * t)
 
-ca = np.ones(ke)
-cb = 0.5 * np.ones(ke)
 
-eaf = dt * sigma / (2 * epsz * epsilon)
-ca[100:] = (1 - eaf) / (1 + eaf)
-cb[100:] = 0.5 / (epsilon * (1 + eaf))
+def field(t: int, nx: int, ca: np.ndarray, cb: np.ndarray, ex: np.ndarray, hy: np.ndarray, bc: np.ndarray):
+	# calculate the Hy field
+	hy[0:nx-1] = hy[0:nx-1] + 0.5 * (ex[0:nx-1] - ex[1:nx])
+	# calculate the Ex field
+	ex[1:nx] = ca[1:nx] * ex[1:nx] + cb[1:nx] * (hy[0:nx-1] - hy[1:nx])
+	# put a sinusoidal wave at the low end
+	ex[1] = ex[1] + sinusoidal(t, 0.01, 700e6)
+	# absorbing boundary conditions
+	ex[0], bc[0], bc[1] = bc[0], bc[1], ex[1]
+	ex[nx-1], bc[3], bc[2] = bc[3], bc[2], ex[nx-2]
 
-nsteps = 500
 
-# FDTD loop
-for time_step in range(1, nsteps + 1):
+def dielectric(nx: int, epsr: float = 1, sigma: float = 0.04, ddx: float = 0.01):
+	ca = 1.0 * np.ones(nx, dtype=np.float64)
+	cb = 0.5 * np.ones(nx, dtype=np.float64)
+	dt: float = ddx/6e8  # time step
+	eps0: float = 8.854e-12  # vacuum permittivity (F/m)
+	epsf: float = dt * sigma/(2 * eps0 * epsr)
+	ca[nx//2:] = (1 - epsf)/(1 + epsf)
+	cb[nx//2:] = 0.5/(epsr * (1 + epsf))
+	return ca, cb
 
-    # calculate the Ex field
-    for k in range(1, ke):
-        ex[k] = ca[k] * ex[k] + cb[k] * (hy[k - 1] - hy[k])
 
-    # put a sinusoidal at the low end
-    ex[5] = ex[5] + np.sin(2 * np.pi * freq * dt * time_step)
+def main():
 
-    # absorbing boundary conditions
-    ex[0] = boundary_low.pop(0)
-    boundary_low.append(ex[1])
-    ex[ke - 1] = boundary_high.pop(0)
-    boundary_high.append(ex[ke - 2])
+	nx: int = 1024
+	ns: int = 1500
 
-    # calculate the Hy field
-    for k in range(ke - 1):
-        hy[k] = hy[k] + 0.5 * (ex[k] - ex[k + 1])
+	ex = np.zeros(nx, dtype=np.float64)
+	hy = np.zeros(nx, dtype=np.float64)
 
-fig, (ax1, ax2) = plt.subplots(2)
-fig.suptitle(r"FDTD simulation of a sinusoidal wave hitting a lossy dielectric")
-ax1.plot(ex, "k", lw=1)
-ax1.plot((0.5 / cb - 1) / 3, "k--", lw=0.75)
-ax1.text(50, 0.5, "T = {}".format(time_step), horizontalalignment="center")
-ax1.text(170, 0.5, "Eps = {}".format(epsilon), horizontalalignment="center")
-ax1.text(170, -0.5, "Cond = {}".format(sigma), horizontalalignment="center")
-ax1.set(xlim=(0, 200), ylim=(-1.2, 1.2), ylabel=r"E$_x$")
-ax1.set(xticks=range(0, 220, 20), yticks=np.arange(-1, 1.2, 1))
-ax2.plot(hy, "k", lw=1)
-ax2.plot((0.5 / cb - 1) / 3, "k--", lw=0.75)
-ax2.text(50, 0.5, "T = {}".format(time_step), horizontalalignment="center")
-ax2.text(170, 0.5, "Eps = {}".format(epsilon), horizontalalignment="center")
-ax2.text(170, -0.5, "Cond = {}".format(sigma), horizontalalignment="center")
-ax2.set(xlim=(0, 200), ylim=(-1.2, 1.2), xlabel=r"FDTD cells", ylabel=r"H$_y$")
-ax2.set(xticks=range(0, 220, 20), yticks=np.arange(-1, 1.2, 1))
-plt.subplots_adjust(bottom=0.2, hspace=0.45)
-plt.savefig("fd1d_1_5.png")
+	bc = np.zeros(4, dtype=np.float64)
+
+	ddx: float = 0.01  # cell size (m)
+	epsr: float = 4  # relative permittivity
+	sigma: float = 0.04  # conductivity (S/m)
+	ca, cb = dielectric(nx, epsr, sigma, ddx)
+
+	for t in range(1, ns+1):
+		field(t, nx, ca, cb, ex, hy, bc)
+
+	visualize(ns, nx, epsr, sigma, cb, ex, hy)
+
+
+if __name__ == "__main__":
+	main()
