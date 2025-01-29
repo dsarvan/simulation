@@ -8,7 +8,7 @@ the discrete Fourier transform with a Gaussian pulse as its source """
 
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy import pi, exp, sqrt, sin, cos, arctan2
+from numpy import sqrt, arctan2
 
 import pycuda.autoinit
 import pycuda.driver as drv
@@ -40,13 +40,14 @@ def visualize(ns: int, nx: int, epsr: float, sigma: float, gax: np.ndarray, ex: 
 
 
 kernel = """
-__device__ float gaussian(int t, int t0, float sigma) {
+__device__ float
+gaussian(int t, int t0, float sigma) {
 	return exp(-0.5 * ((t - t0)/sigma) * ((t - t0)/sigma));
 }
 
 
 __global__ void
-field(int t, int nf, int nx, float dt, float *freq, float *gax, float *gbx, float *r_pt, float *i_pt, float *r_in, float *i_in, float *dx, float *ex, float *ix, float *hy, float *bc) {
+field(int t, int nx, float *gax, float *gbx, float *dx, float *ex, float *ix, float *hy) {
 	int index = blockIdx.x * blockDim.x + threadIdx.x;
 	int stride = blockDim.x * gridDim.x;
 
@@ -75,6 +76,13 @@ field(int t, int nf, int nx, float dt, float *freq, float *gax, float *gbx, floa
 		ix[i] = ix[i] + gbx[i] * ex[i];
 
 	__syncthreads();
+}
+
+
+__global__ void
+fieldfourier(int t, int nf, int nx, float dt, float *freq, float *ex, float *r_pt, float *i_pt) {
+	int index = blockIdx.x * blockDim.x + threadIdx.x;
+	int stride = blockDim.x * gridDim.x;
 
 	for (int i = index; i < nx; i += stride) {
 		for (int n = threadIdx.y; n < nf; n += blockDim.y) {
@@ -84,19 +92,17 @@ field(int t, int nf, int nx, float dt, float *freq, float *gax, float *gbx, floa
 	}
 
 	__syncthreads();
+}
 
-	if (t < nx/2) {
-		for (int n = threadIdx.y; n < nf; n += blockDim.y) {
-			r_in[n] = r_in[n] + cos(2*M_PI*freq[n]*dt*t) * ex[10];
-			i_in[n] = i_in[n] - sin(2*M_PI*freq[n]*dt*t) * ex[10];
-		}
+
+__global__ void
+pulsefourier(int t, int nf, float dt, float *freq, float *ex, float *r_in, float *i_in) {
+	for (int n = threadIdx.y; n < nf; n += blockDim.y) {
+		r_in[n] = r_in[n] + cos(2*M_PI*freq[n]*dt*t) * ex[10];
+		i_in[n] = i_in[n] - sin(2*M_PI*freq[n]*dt*t) * ex[10];
 	}
 
 	__syncthreads();
-
-	/* absorbing boundary conditions */
-	ex[0] = bc[0], bc[0] = bc[1], bc[1] = ex[1];
-	ex[nx-1] = bc[3], bc[3] = bc[2], bc[2] = ex[nx-2];
 }
 """
 
@@ -113,8 +119,8 @@ def dielectric(nx: int, epsr: float = 1, sigma: float = 0.04, ddx: float = 0.01)
 
 def main():
 
-	nx = np.int32(201)
-	ns = np.int32(400)
+	nx = np.int32(10240)
+	ns = np.int32(15000)
 
 	dx = gpuarray.to_gpu(np.zeros(nx, dtype=np.float32))
 	ex = gpuarray.to_gpu(np.zeros(nx, dtype=np.float32))
@@ -151,12 +157,19 @@ def main():
 
 	mod = SourceModule(kernel)
 	field = mod.get_function("field")
+	fieldfourier = mod.get_function("fieldfourier")
+	pulsefourier = mod.get_function("pulsefourier")
 
 	gridDim = (gridDimx,1)
 	blockDim = (blockDimx,blockDimy,1)
 
 	for t in range(1, ns+1):
-		field(np.int32(t), np.int32(nf), nx, dt, freq, gax, gbx, r_pt, i_pt, r_in, i_in, dx, ex, ix, hy, bc, grid=gridDim, block=blockDim)
+		field(np.int32(t), nx, gax, gbx, dx, ex, ix, hy, grid=gridDim, block=blockDim)
+		fieldfourier(np.int32(t), np.int32(nf), nx, dt, freq, ex, r_pt, i_pt, grid=gridDim, block=blockDim)
+		if t < nx//2: pulsefourier(np.int32(t), np.int32(nf), dt, freq, ex, r_in, i_in, grid=gridDim, block=blockDim)
+		# absorbing boundary conditions
+		ex[0], bc[0], bc[1] = bc[0], bc[1], ex[1]
+		ex[-1], bc[3], bc[2] = bc[3], bc[2], ex[-2]
 
 	drv.Context.synchronize()
 
