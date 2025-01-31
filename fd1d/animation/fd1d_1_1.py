@@ -17,15 +17,6 @@ def gaussian(t: int, t0: int, sigma: float) -> float:
     return np.exp(-0.5 * ((t - t0)/sigma)**2)
 
 
-def field(t: int, nx: int, ex: np.ndarray, hy: np.ndarray):
-    # calculate the Hy field
-    hy[0:nx-1] = hy[0:nx-1] + 0.5 * (ex[0:nx-1] - ex[1:nx])
-    # calculate the Ex field
-    ex[1:nx] = ex[1:nx] + 0.5 * (hy[0:nx-1] - hy[1:nx])
-    # put a Gaussian pulse in the middle
-    ex[nx//2] = gaussian(t, 40, 12)
-
-
 def main():
 
     nx: int = 201
@@ -51,8 +42,13 @@ def main():
     ax2.set(xticks=range(0, nx+1, round(nx//10,-1)), yticks=np.arange(-1, 1.2, 1))
 
     with writer.saving(fig, "fd1d_1_1.mp4", 300):
-        for t in range(1, ns+1):
-            field(t, nx, ex, hy)
+        for t in np.arange(1, ns+1).astype(np.int32):
+            # calculate the Ex field
+            ex[1:nx] = ex[1:nx] + 0.5 * (hy[0:nx-1] - hy[1:nx])
+            # put a Gaussian pulse in the middle
+            ex[nx//2] = gaussian(t, 40, 12)
+            # calculate the Hy field
+            hy[0:nx-1] = hy[0:nx-1] + 0.5 * (ex[0:nx-1] - ex[1:nx])
 
             line1.set_ydata(ex)
             time_text.set_text(f"T = {t}")
