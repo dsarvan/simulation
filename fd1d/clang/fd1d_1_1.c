@@ -14,17 +14,19 @@ double gaussian(int t, int t0, double sigma) {
 }
 
 
-void field(int t, int nx, double *ex, double *hy) {
-	/* calculate the Hy field */
-	for (int i = 0; i < nx - 1; i++)
-		hy[i] = hy[i] + 0.5 * (ex[i] - ex[i+1]);
-
+void exfield(int t, int nx, double *ex, double *hy) {
 	/* calculate the Ex field */
 	for (int i = 1; i < nx; i++)
 		ex[i] = ex[i] + 0.5 * (hy[i-1] - hy[i]);
-
 	/* put a Gaussian pulse in the middle */
 	ex[nx/2] = gaussian(t, 40, 12);
+}
+
+
+void hyfield(int nx, double *ex, double *hy) {
+	/* calculate the Hy field */
+	for (int i = 0; i < nx - 1; i++)
+		hy[i] = hy[i] + 0.5 * (ex[i] - ex[i+1]);
 }
 
 
@@ -36,14 +38,10 @@ int main() {
 	double *ex = (double *) calloc(nx, sizeof(*ex));
 	double *hy = (double *) calloc(nx, sizeof(*hy));
 
-	/* initialize ex and hy arrays */
-	for (size_t i = 0; i < nx; i++) {
-		ex[i] = 0.0f;
-		hy[i] = 0.0f;
+	for (int t = 1; t <= ns; t++) {
+		exfield(t, nx, ex, hy);
+		hyfield(nx, ex, hy);
 	}
-
-	for (int t = 1; t <= ns; t++)
-		field(t, nx, ex, hy);
 
 	free(ex);
 	free(hy);
