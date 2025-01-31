@@ -10,41 +10,41 @@
 
 
 double gaussian(int t, int t0, double sigma) {
-	return exp(-0.5 * ((t - t0)/sigma) * ((t - t0)/sigma));
+    return exp(-0.5 * ((t - t0)/sigma) * ((t - t0)/sigma));
 }
 
 
 void exfield(int t, int nx, double *ex, double *hy) {
-	/* calculate the Ex field */
-	for (int i = 1; i < nx; i++)
-		ex[i] = ex[i] + 0.5 * (hy[i-1] - hy[i]);
-	/* put a Gaussian pulse in the middle */
-	ex[nx/2] = gaussian(t, 40, 12);
+    /* calculate the Ex field */
+    for (int i = 1; i < nx; i++)
+        ex[i] = ex[i] + 0.5 * (hy[i-1] - hy[i]);
+    /* put a Gaussian pulse in the middle */
+    ex[nx/2] = gaussian(t, 40, 12);
 }
 
 
 void hyfield(int nx, double *ex, double *hy) {
-	/* calculate the Hy field */
-	for (int i = 0; i < nx - 1; i++)
-		hy[i] = hy[i] + 0.5 * (ex[i] - ex[i+1]);
+    /* calculate the Hy field */
+    for (int i = 0; i < nx - 1; i++)
+        hy[i] = hy[i] + 0.5 * (ex[i] - ex[i+1]);
 }
 
 
 int main() {
 
-	int nx = 201;
-	int ns = 100;
+    int nx = 201;
+    int ns = 100;
 
-	double *ex = (double *) calloc(nx, sizeof(*ex));
-	double *hy = (double *) calloc(nx, sizeof(*hy));
+    double *ex = (double *) calloc(nx, sizeof(*ex));
+    double *hy = (double *) calloc(nx, sizeof(*hy));
 
-	for (int t = 1; t <= ns; t++) {
-		exfield(t, nx, ex, hy);
-		hyfield(nx, ex, hy);
-	}
+    for (int t = 1; t <= ns; t++) {
+        exfield(t, nx, ex, hy);
+        hyfield(nx, ex, hy);
+    }
 
-	free(ex);
-	free(hy);
+    free(ex);
+    free(hy);
 
-	return 0;
+    return 0;
 }
