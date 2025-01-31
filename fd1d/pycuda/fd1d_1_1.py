@@ -35,30 +35,26 @@ kernel = """
 #define idx (blockIdx.x * blockDim.x + threadIdx.x)
 #define stx (blockDim.x * gridDim.x)
 
+
 __device__ float gaussian(int t, int t0, float sigma) {
 	return exp(-0.5 * ((t - t0)/sigma) * ((t - t0)/sigma));
 }
 
 
 __global__ void exfield(int t, int nx, float *ex, float *hy) {
-
 	/* calculate the Ex field */
 	for (int i = idx + 1; i < nx; i += stx)
 		ex[i] = ex[i] + 0.5 * (hy[i-1] - hy[i]);
-
 	__syncthreads();
-
 	/* put a Gaussian pulse in the middle */
 	if (idx == nx/2) ex[nx/2] = gaussian(t, 40, 12);
 }
 
 
 __global__ void hyfield(int nx, float *ex, float *hy) {
-
 	/* calculate the Hy field */
 	for (int i = idx; i < nx - 1; i += stx)
 		hy[i] = hy[i] + 0.5 * (ex[i] - ex[i+1]);
-
 	__syncthreads();
 }
 """
@@ -72,10 +68,10 @@ def main():
 	ex = gpuarray.zeros(nx, dtype=np.float32)
 	hy = gpuarray.zeros(nx, dtype=np.float32)
 
-	numSM = drv.Device(0).multiprocessor_count
+	numSM: int = drv.Device(0).multiprocessor_count
 
-	blockDimx = 256
-	gridDimx = 32*numSM
+	blockDimx: int = 256
+	gridDimx: int = 32*numSM
 
 	gridDim = (gridDimx,1)
 	blockDim = (blockDimx,1,1)
