@@ -13,12 +13,14 @@
 #define stx (blockDim.x * gridDim.x)
 
 
-__device__ float gaussian(int t, int t0, float sigma) {
+__device__
+float gaussian(int t, int t0, float sigma) {
     return exp(-0.5 * ((t - t0)/sigma) * ((t - t0)/sigma));
 }
 
 
-__global__ void exfield(int t, int nx, float *ex, float *hy) {
+__global__
+void exfield(int t, int nx, float *ex, float *hy) {
     /* calculate the Ex field */
     for (int i = idx + 1; i < nx; i += stx)
         ex[i] = ex[i] + 0.5 * (hy[i-1] - hy[i]);
@@ -28,7 +30,8 @@ __global__ void exfield(int t, int nx, float *ex, float *hy) {
 }
 
 
-__global__ void hyfield(int nx, float *ex, float *hy) {
+__global__
+void hyfield(int nx, float *ex, float *hy) {
     /* calculate the Hy field */
     for (int i = idx; i < nx - 1; i += stx)
         hy[i] = hy[i] + 0.5 * (ex[i] - ex[i+1]);
@@ -38,8 +41,8 @@ __global__ void hyfield(int nx, float *ex, float *hy) {
 
 int main() {
 
-    int nx = 201;
-    int ns = 100;
+    int nx = 512;  /* number of grid points */
+    int ns = 300;  /* number of time steps */
 
     float *ex, *hy;
     /* allocate unified memory accessible from host or device */
