@@ -32,8 +32,8 @@ void hyfield(int nx, double *ex, double *hy) {
 
 int main() {
 
-    int nx = 201;
-    int ns = 100;
+    int nx = 512;  /* number of grid points */
+    int ns = 300;  /* number of time steps */
 
     double *ex = (double *) calloc(nx, sizeof(*ex));
     double *hy = (double *) calloc(nx, sizeof(*hy));
