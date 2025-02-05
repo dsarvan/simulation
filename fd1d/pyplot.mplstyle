@@ -9,8 +9,19 @@ figure.dpi : 100
 figure.titlesize : 12
 
 font.family : serif
+font.serif : Times
+font.sans-serif : Helvetica
+font.monospace : Courier
 font.weight : normal
 font.size : 10
+
+mathtext.rm : serif
+mathtext.it : serif:italic
+mathtext.bf : serif:bold
+mathtext.fontset : custom
+
+# Text rendering with LaTeX
+# https://matplotlib.org/stable/users/explain/text/usetex.html
 
 grid.alpha : 0.5
 grid.color : black
