@@ -13,8 +13,8 @@ plt.style.use("classic")
 plt.style.use("../pyplot.mplstyle")
 
 
-def sinusoidal(t: int, ddx: float, freq: float) -> float:
-    dt: float = ddx/6e8  # time step
+def sinusoidal(t: int, ds: float, freq: float) -> float:
+    dt: float = ds/6e8  # time step (s)
     return np.sin(2 * np.pi * freq * dt * t)
 
 
@@ -26,16 +26,16 @@ def dielectric(nx: int, epsr: float) -> np.ndarray:
 
 def main():
 
-    nx: int = 512
-    ns: int = 3000
+    nx: int = 512  # number of grid points
+    ns: int = 740  # number of time steps
 
     ex = np.zeros(nx, dtype=np.float64)
     hy = np.zeros(nx, dtype=np.float64)
 
     bc = np.zeros(4, dtype=np.float64)
 
-    ddx: float = 0.01  # cell size (m)
-    dt: float = ddx/6e8  # time step
+    ds: float = 0.01  # spatial step (m)
+    dt: float = ds/6e8  # time step (s)
     epsr: float = 4  # relative permittivity
     cb: np.ndarray = dielectric(nx, epsr)
 
@@ -45,21 +45,18 @@ def main():
     writer = fwriter(fps=15, metadata=data)
 
     # draw an empty plot, but preset the plot x- and y- limits
-    fig, (ax1, ax2) = plt.subplots(2, sharex=False, gridspec_kw={"hspace": 0.2})
+    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace": 0.2})
     fig.suptitle(r"FDTD simulation of a sinusoidal striking dielectric material")
-    medium = (0.5/cb - 1)/(epsr - 1) if epsr > 1 else (0.5/cb - 1)
+    medium = (0.5/cb - 1)/(epsr - 1)*1e3 if epsr > 1 else (0.5/cb - 1)
     medium[medium==0] = -1e3
-    line1, = ax1.plot(ex, "k", lw=1)
-    ax1.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
-    time_text = ax1.text(0.02, 0.90, "", transform=ax1.transAxes)
-    epsr_txt1 = ax1.text(0.80, 0.80, "", transform=ax1.transAxes)
-    ax1.set(xlim=(0, nx-1), ylim=(-1.2, 1.2), ylabel=r"$E_x$")
-    ax1.set(xticks=range(0, nx+1, round(nx//10,-1)), yticks=np.arange(-1, 1.2, 1))
-    line2, = ax2.plot(hy, "k", lw=1)
-    ax2.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
-    epsr_txt2 = ax2.text(0.80, 0.80, "", transform=ax2.transAxes)
-    ax2.set(xlim=(0, nx-1), ylim=(-1.2, 1.2), xlabel=r"FDTD cells", ylabel=r"$H_y$")
-    ax2.set(xticks=range(0, nx+1, round(nx//10,-1)), yticks=np.arange(-1, 1.2, 1))
+    axline, = ax.plot(ex, color="black", linewidth=1)
+    ax.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
+    ax.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
+    ax.set(xticks=range(0, nx+1, round(nx//10,-1)))
+    ax.set(xlabel=r"$z\;(cm)$", ylabel=r"$E_x\;(V/m)$")
+    axtime = ax.text(0.02, 0.90, "", transform=ax.transAxes)
+    axepsr = ax.text(0.90, 0.90, "", transform=ax.transAxes)
+    plt.subplots_adjust(bottom=0.2, hspace=0.45)
 
     with writer.saving(fig, "fd1d_1_4.mp4", 300):
         for t in np.arange(1, ns+1).astype(np.int32):
@@ -73,11 +70,9 @@ def main():
             # calculate the Hy field
             hy[0:nx-1] = hy[0:nx-1] + 0.5 * (ex[0:nx-1] - ex[1:nx])
 
-            line1.set_ydata(ex)
-            time_text.set_text(f"T = {t}")
-            epsr_txt1.set_text(f"epsr = {epsr}")
-            line2.set_ydata(hy)
-            epsr_txt2.set_text(f"epsr = {epsr}")
+            axline.set_ydata(ex)
+            axtime.set_text(rf"$T$ = {t}")
+            axepsr.set_text(rf"$\epsilon_r$ = {epsr}")
             writer.grab_frame()
 
 
