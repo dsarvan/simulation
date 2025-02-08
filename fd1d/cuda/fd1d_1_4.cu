@@ -13,26 +13,29 @@
 #define stx (blockDim.x * gridDim.x)
 
 
-__device__ float sinusoidal(int t, float ddx, float freq) {
-    float dt = ddx/6e8;  /* time step */
+__device__
+float sinusoidal(int t, float ds, float freq) {
+    float dt = ds/6e8;  /* time step (s) */
     return sin(2 * M_PI * freq * dt * t);
 }
 
 
-__global__ void exfield(int t, int nx, float *cb, float *ex, float *hy, float *bc) {
+__global__
+void exfield(int t, int nx, float *cb, float *ex, float *hy) {
     /* calculate the Ex field */
     for (int i = idx + 1; i < nx; i += stx)
         ex[i] = ex[i] + cb[i] * (hy[i-1] - hy[i]);
     __syncthreads();
     /* put a sinusoidal wave at the low end */
     if (idx == 1) ex[1] = ex[1] + sinusoidal(t, 0.01, 700e6);
-    /* absorbing boundary conditions */
-    if (idx == 0) ex[0] = bc[0], bc[0] = bc[1], bc[1] = ex[1];
-    if (idx == nx-1) ex[nx-1] = bc[3], bc[3] = bc[2], bc[2] = ex[nx-2];
 }
 
 
-__global__ void hyfield(int nx, float *ex, float *hy) {
+__global__
+void hyfield(int nx, float *ex, float *hy, float *bc) {
+    /* absorbing boundary conditions */
+    if (idx == 0) ex[0] = bc[0], bc[0] = bc[1], bc[1] = ex[1];
+    if (idx == nx-1) ex[nx-1] = bc[3], bc[3] = bc[2], bc[2] = ex[nx-2];
     /* calculate the Hy field */
     for (int i = idx; i < nx - 1; i += stx)
         hy[i] = hy[i] + 0.5 * (ex[i] - ex[i+1]);
@@ -51,8 +54,8 @@ float *dielectric(int nx, float epsr) {
 
 int main() {
 
-    int nx = 1024;
-    int ns = 1500;
+    int nx = 512;  /* number of grid points */
+    int ns = 740;  /* number of time steps */
 
     float *ex, *hy;
     /* allocate unified memory accessible from host or device */
@@ -69,8 +72,8 @@ int main() {
     cudaMallocManaged(&bc, 4*sizeof(float));
     bc[4] = {0.0f};
 
-    float ddx = 0.01;  /* cell size (m) */
-    float dt = ddx/6e8;  /* time step */
+    float ds = 0.01;  /* spatial step (m) */
+    float dt = ds/6e8;  /* time step (s) */
     float epsr = 4;  /* relative permittivity */
     float *cb = dielectric(nx, epsr);
 
@@ -82,8 +85,8 @@ int main() {
     gridDim.x = 32*numSM;
 
     for (int t = 1; t <= ns; t++) {
-        exfield<<<gridDim, blockDim>>>(t, nx, cb, ex, hy, bc);
-        hyfield<<<gridDim, blockDim>>>(nx, ex, hy);
+        exfield<<<gridDim, blockDim>>>(t, nx, cb, ex, hy);
+        hyfield<<<gridDim, blockDim>>>(nx, ex, hy, bc);
     }
 
     cudaDeviceSynchronize();
