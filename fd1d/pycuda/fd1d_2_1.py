@@ -18,116 +18,119 @@ plt.style.use("classic")
 plt.style.use("../pyplot.mplstyle")
 
 
-def visualize(ns: int, nx: int, epsr: float, sigma: float, gbx: np.ndarray, ex: np.ndarray, hy: np.ndarray) -> None:
-	fig, (ax1, ax2) = plt.subplots(2, sharex=False, gridspec_kw={"hspace": 0.2})
-	fig.suptitle(r"FDTD simulation of a sinusoidal wave striking lossy dielectric")
-	medium = gbx/gbx[nx//2]
-	medium[medium==0] = -1.5
-	ax1.plot(ex, "k", lw=1)
-	ax1.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
-	ax1.text(nx/4, 0.5, f"T = {ns}", horizontalalignment="center")
-	ax1.text(3*nx/4, 0.5, f"epsr = {epsr}", horizontalalignment="center")
-	ax1.text(3*nx/4, -0.5, rf"$\sigma$ = {sigma}", horizontalalignment="center")
-	ax1.set(xlim=(0, nx-1), ylim=(-1.2, 1.2), ylabel=r"$E_x$")
-	ax1.set(xticks=range(0, nx+1, round(nx//10,-1)), yticks=np.arange(-1, 1.2, 1))
-	ax2.plot(hy, "k", lw=1)
-	ax2.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
-	ax2.set(xlim=(0, nx-1), ylim=(-1.2, 1.2), xlabel=r"FDTD cells", ylabel=r"$H_y$")
-	ax2.set(xticks=range(0, nx+1, round(nx//10,-1)), yticks=np.arange(-1, 1.2, 1))
-	plt.subplots_adjust(bottom=0.2, hspace=0.45)
-	plt.show()
+def visualize(ns: int, nx: int, epsr: float, sigma: float, gax: np.ndarray, ex: np.ndarray) -> None:
+    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace": 0.2})
+    fig.suptitle(r"FDTD simulation of a sinusoidal striking lossy dielectric material")
+    medium = (1 - gax)/(1 - gax[-1])*1e3 if epsr > 1 else (1 - gax)
+    medium[medium==0] = -1e3
+    ax.plot(ex, color="black", linewidth=1)
+    ax.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
+    ax.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
+    ax.set(xticks=range(0, nx+1, round(nx//10,-1)))
+    ax.set(xlabel=r"$z\;(cm)$", ylabel=r"$E_x\;(V/m)$")
+    ax.text(0.02, 0.90, rf"$T$ = {ns}", transform=ax.transAxes)
+    ax.text(0.90, 0.90, rf"$\epsilon_r$ = {epsr}", transform=ax.transAxes)
+    ax.text(0.85, 0.80, rf"$\sigma$ = {sigma} $S/m$", transform=ax.transAxes)
+    plt.subplots_adjust(bottom=0.2, hspace=0.45)
+    plt.show()
 
 
 kernel = """
-__device__ float sinusoidal(int t, float ddx, float freq) {
-	float dt = ddx/6e8; /* time step */
-	return sin(2 * M_PI * freq * dt * t);
+#define idx (blockIdx.x * blockDim.x + threadIdx.x)
+#define stx (blockDim.x * gridDim.x)
+
+
+__device__
+float sinusoidal(int t, float ds, float freq) {
+    float dt = ds/6e8;  /* time step (s) */
+    return sin(2 * M_PI * freq * dt * t);
 }
 
 
-__global__ void field(int t, int nx, float *gax, float *gbx, float *dx, float *ex, float *ix, float *hy, float *bc) {
-	int index = blockIdx.x * blockDim.x + threadIdx.x;
-	int stride = blockDim.x * gridDim.x;
+__global__
+void dxfield(int t, int nx, float *dx, float *hy) {
+    /* calculate the electric flux density Dx */
+    for (int i = idx + 1; i < nx; i += stx)
+        dx[i] = dx[i] + 0.5 * (hy[i-1] - hy[i]);
+    __syncthreads();
+    /* put a sinusoidal wave at the low end */
+    if (idx == 1) dx[1] = dx[1] + sinusoidal(t, 0.01, 700e6);
+}
 
-	/* calculate the Hy field */
-	for (int i = index; i < nx - 1; i += stride)
-		hy[i] = hy[i] + 0.5 * (ex[i] - ex[i+1]);
 
-	__syncthreads();
+__global__
+void exfield(int nx, float *gax, float *gbx, float *dx, float *ix, float *ex) {
+    /* calculate the Ex field from Dx */
+    for (int i = idx + 1; i < nx; i += stx) {
+        ex[i] = gax[i] * (dx[i] - ix[i]);
+        ix[i] = ix[i] + gbx[i] * ex[i];
+    }
+    __syncthreads();
+}
 
-	/* calculate the electric flux density Dx */
-	for (int i = index + 1; i < nx; i += stride)
-		dx[i] = dx[i] + 0.5 * (hy[i-1] - hy[i]);
 
-	__syncthreads();
-
-	/* put a sinusoidal wave at the low end */
-	dx[1] = dx[1] + sinusoidal(t, 0.01, 700e6);
-
-	/* calculate the Ex field from Dx */
-	for (int i = index + 1; i < nx; i += stride)
-		ex[i] = gax[i] * (dx[i] - ix[i]);
-
-	__syncthreads();
-
-	for (int i = index + 1; i < nx; i += stride)
-		ix[i] = ix[i] + gbx[i] * ex[i];
-
-	__syncthreads();
-
-	/* absorbing boundary conditions */
-	ex[0] = bc[0], bc[0] = bc[1], bc[1] = ex[1];
-	ex[nx-1] = bc[3], bc[3] = bc[2], bc[2] = ex[nx-2];
+__global__
+void hyfield(int nx, float *ex, float *hy, float *bc) {
+    /* absorbing boundary conditions */
+    if (idx == 0) ex[0] = bc[0], bc[0] = bc[1], bc[1] = ex[1];
+    if (idx == nx-1) ex[nx-1] = bc[3], bc[3] = bc[2], bc[2] = ex[nx-2];
+    /* calculate the Hy field */
+    for (int i = idx; i < nx - 1; i += stx)
+        hy[i] = hy[i] + 0.5 * (ex[i] - ex[i+1]);
+    __syncthreads();
 }
 """
 
 
-def dielectric(nx: int, epsr: float = 1, sigma: float = 0.04, ddx: float = 0.01):
-	gax = np.ones(nx, dtype=np.float32)
-	gbx = np.zeros(nx, dtype=np.float32)
-	dt: float = ddx/6e8  # time step
-	eps0: float = 8.854e-12  # vacuum permittivity (F/m)
-	gax[nx//2:] = 1/(epsr + (sigma * dt/eps0))
-	gbx[nx//2:] = sigma * dt/eps0
-	return gax, gbx
+def dielectric(nx: int, dt: float, epsr: float, sigma: float) -> tuple:
+    gax = gpuarray.ones(nx, dtype=np.float32)
+    gbx = gpuarray.zeros(nx, dtype=np.float32)
+    eps0: float = 8.854e-12  # vacuum permittivity (F/m)
+    gax[nx//2:] = 1/(epsr + (sigma * dt/eps0))
+    gbx[nx//2:] = sigma * dt/eps0
+    return gax, gbx
 
 
 def main():
 
-	nx = np.int32(1024)
-	ns = np.int32(1500)
+    nx = np.int32(512)  # number of grid points
+    ns = np.int32(740)  # number of time steps
 
-	dx = gpuarray.to_gpu(np.zeros(nx, dtype=np.float32))
-	ex = gpuarray.to_gpu(np.zeros(nx, dtype=np.float32))
-	ix = gpuarray.to_gpu(np.zeros(nx, dtype=np.float32))
-	hy = gpuarray.to_gpu(np.zeros(nx, dtype=np.float32))
+    dx = gpuarray.zeros(nx, dtype=np.float32)
+    ex = gpuarray.zeros(nx, dtype=np.float32)
+    ix = gpuarray.zeros(nx, dtype=np.float32)
+    hy = gpuarray.zeros(nx, dtype=np.float32)
 
-	bc = gpuarray.to_gpu(np.zeros(4, dtype=np.float32))
+    bc = gpuarray.zeros(4, dtype=np.float32)
 
-	ddx: float = 0.01  # cell size (m)
-	epsr: float = 4  # relative permittivity
-	sigma: float = 0.04  # conductivity (S/m)
-	gax, gbx = dielectric(nx, epsr, sigma, ddx)
+    ds: float = 0.01  # spatial step (m)
+    dt: float = ds/6e8  # time step (s)
+    epsr: float = 4  # relative permittivity
+    sigma: float = 0.04  # conductivity (S/m)
+    gax, gbx = dielectric(nx, dt, epsr, sigma)
 
-	gax = gpuarray.to_gpu(gax)
-	gbx = gpuarray.to_gpu(gbx)
+    numSM: int = drv.Device(0).multiprocessor_count
 
-	blockDimx = 256
-	gridDimx = int((nx + blockDimx - 1)/blockDimx)
+    blockDimx: int = 256
+    gridDimx: int = 32*numSM
 
-	mod = SourceModule(kernel)
-	field = mod.get_function("field")
+    gridDim = (gridDimx,1,1)
+    blockDim = (blockDimx,1,1)
 
-	gridDim = (gridDimx,1)
-	blockDim = (blockDimx,1,1)
+    mod = SourceModule(kernel)
+    dxfield = mod.get_function("dxfield")
+    exfield = mod.get_function("exfield")
+    hyfield = mod.get_function("hyfield")
 
-	for t in range(1, ns+1):
-		field(np.int32(t), nx, gax, gbx, dx, ex, ix, hy, bc, grid=gridDim, block=blockDim)
+    for t in np.arange(1, ns+1).astype(np.int32):
+        dxfield(t, nx, dx, hy, grid=gridDim, block=blockDim)
+        exfield(nx, gax, gbx, dx, ix, ex, grid=gridDim, block=blockDim)
+        hyfield(nx, ex, hy, bc, grid=gridDim, block=blockDim)
 
-	drv.Context.synchronize()
+    drv.Context.synchronize()
 
-	visualize(ns, nx, epsr, sigma, gbx.get(), ex.get(), hy.get())
+    visualize(ns, nx, epsr, sigma, gax.get(), ex.get())
 
 
 if __name__ == "__main__":
-	main()
+    main()
