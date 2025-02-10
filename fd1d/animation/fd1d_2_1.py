@@ -14,92 +14,91 @@ plt.style.use("classic")
 plt.style.use("../pyplot.mplstyle")
 
 
-def sinusoidal(t: int, ddx: float = 0.01, freq: float = 700e6) -> float:
-	dt: float = ddx/6e8  # time step
-	return np.sin(2 * np.pi * freq * dt * t)
+def sinusoidal(t: int, ds: float, freq: float) -> float:
+    dt: float = ds/6e8  # time step (s)
+    return np.sin(2 * np.pi * freq * dt * t)
 
 
-def field(t: int, nx: int, gax: np.ndarray, gbx: np.ndarray, dx: np.ndarray, ex: np.ndarray, ix: np.ndarray, hy: np.ndarray, bc: np.ndarray):
-	# calculate the Hy field
-	hy[0:nx-1] = hy[0:nx-1] + 0.5 * (ex[0:nx-1] - ex[1:nx])
-	# calculate the electric flux density Dx
-	dx[1:nx] = dx[1:nx] + 0.5 * (hy[0:nx-1] - hy[1:nx])
-	# put a sinusoidal wave at the low end
-	dx[1] = dx[1] + sinusoidal(t, 0.01, 700e6)
-	# calculate the Ex field from Dx
-	ex[1:nx] = gax[1:nx] * (dx[1:nx] - ix[1:nx])
-	ix[1:nx] = ix[1:nx] + gbx[1:nx] * ex[1:nx]
-	# absorbing boundary conditions
-	ex[0], bc[0], bc[1] = bc[0], bc[1], ex[1]
-	ex[nx-1], bc[3], bc[2] = bc[3], bc[2], ex[nx-2]
+def dxfield(t: int, nx: int, dx: np.ndarray, hy: np.ndarray) -> None:
+    # calculate the electric flux density Dx
+    dx[1:nx] = dx[1:nx] + 0.5 * (hy[0:nx-1] - hy[1:nx])
+    # put a sinusoidal wave at the low end
+    dx[1] = dx[1] + sinusoidal(t, 0.01, 700e6)
 
 
-def dielectric(nx: int, epsr: float = 1, sigma: float = 0.04, ddx: float = 0.01):
-	gax = np.ones(nx, dtype=np.float64)
-	gbx = np.zeros(nx, dtype=np.float64)
-	dt: float = ddx/6e8  # time step
-	eps0: float = 8.854e-12  # vacuum permittivity (F/m)
-	gax[nx//2:] = 1/(epsr + (sigma * dt/eps0))
-	gbx[nx//2:] = sigma * dt/eps0
-	return gax, gbx
+def exfield(nx: int, gax: np.ndarray, gbx: np.ndarray, dx: np.ndarray, ix: np.ndarray, ex: np.ndarray) -> None:
+    # calculate the Ex field from Dx
+    ex[1:nx] = gax[1:nx] * (dx[1:nx] - ix[1:nx])
+    ix[1:nx] = ix[1:nx] + gbx[1:nx] * ex[1:nx]
+
+
+def hyfield(nx: int, ex: np.ndarray, hy: np.ndarray, bc: np.ndarray) -> None:
+    # absorbing boundary conditions
+    ex[0], bc[0], bc[1] = bc[0], bc[1], ex[1]
+    ex[nx-1], bc[3], bc[2] = bc[3], bc[2], ex[nx-2]
+    # calculate the Hy field
+    hy[0:nx-1] = hy[0:nx-1] + 0.5 * (ex[0:nx-1] - ex[1:nx])
+
+
+def dielectric(nx: int, dt: float, epsr: float, sigma: float) -> tuple:
+    gax = np.ones(nx, dtype=np.float64)
+    gbx = np.zeros(nx, dtype=np.float64)
+    eps0: float = 8.854e-12  # vacuum permittivity (F/m)
+    gax[nx//2:] = 1/(epsr + (sigma * dt/eps0))
+    gbx[nx//2:] = sigma * dt/eps0
+    return gax, gbx
 
 
 def main():
 
-	nx: int = 512
-	ns: int = 3000
+    nx: int = 512  # number of grid points
+    ns: int = 740  # number of time steps
 
-	dx = np.zeros(nx, dtype=np.float64)
-	ex = np.zeros(nx, dtype=np.float64)
-	ix = np.zeros(nx, dtype=np.float64)
-	hy = np.zeros(nx, dtype=np.float64)
+    dx = np.zeros(nx, dtype=np.float64)
+    ex = np.zeros(nx, dtype=np.float64)
+    ix = np.zeros(nx, dtype=np.float64)
+    hy = np.zeros(nx, dtype=np.float64)
 
-	bc = np.zeros(4, dtype=np.float64)
+    bc = np.zeros(4, dtype=np.float64)
 
-	ddx: float = 0.01  # cell size (m)
-	epsr: float = 4  # relative permittivity
-	sigma: float = 0.04  # conductivity (S/m)
-	gax, gbx = dielectric(nx, epsr, sigma, ddx)
+    ds: float = 0.01  # spatial step (m)
+    dt: float = ds/6e8  # time step (s)
+    epsr: float = 4  # relative permittivity
+    sigma: float = 0.04  # conductivity (S/m)
+    gax, gbx = dielectric(nx, dt, epsr, sigma)
 
-	# define the meta data for the movie
-	fwriter = animation.writers["ffmpeg"]
-	data = {"title": "Simulation of a sinusoidal hitting lossy dielectric"}
-	writer = fwriter(fps=15, metadata=data)
+    # define the meta data for the movie
+    fwriter = animation.writers["ffmpeg"]
+    data = {"title": "Simulation of a sinusoidal hitting lossy dielectric medium"}
+    writer = fwriter(fps=15, metadata=data)
 
-	# draw an empty plot, but preset the plot x- and y- limits
-	fig, (ax1, ax2) = plt.subplots(2, sharex=False, gridspec_kw={"hspace": 0.2})
-	fig.suptitle(r"FDTD simulation of a sinusoidal wave striking lossy dielectric")
-	medium = gbx/gbx[nx//2]
-	medium[medium==0] = -1.5
-	line1, = ax1.plot(ex, "k", lw=1)
-	ax1.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
-	time_text = ax1.text(0.02, 0.90, "", transform=ax1.transAxes)
-	epsr_txt1 = ax1.text(0.80, 0.80, "", transform=ax1.transAxes)
-	cond_txt1 = ax1.text(0.80, 0.70, "", transform=ax1.transAxes)
-	ax1.set(xlim=(0, nx-1), ylim=(-1.2, 1.2), ylabel=r"$E_x$")
-	ax1.set(xticks=range(0, nx+1, round(nx//10,-1)), yticks=np.arange(-1, 1.2, 1))
-	line2, = ax2.plot(hy, "k", lw=1)
-	ax2.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
-	epsr_txt2 = ax2.text(0.80, 0.80, "", transform=ax2.transAxes)
-	cond_txt2 = ax2.text(0.80, 0.70, "", transform=ax2.transAxes)
-	ax2.set(xlim=(0, nx-1), ylim=(-1.2, 1.2), xlabel=r"FDTD cells", ylabel=r"$H_y$")
-	ax2.set(xticks=range(0, nx+1, round(nx//10,-1)), yticks=np.arange(-1, 1.2, 1))
+    # draw an empty plot, but preset the plot x- and y- limits
+    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace": 0.2})
+    fig.suptitle(r"FDTD simulation of a sinusoidal striking lossy dielectric material")
+    medium = (1 - gax)/(1 - gax[-1])*1e3 if epsr > 1 else (1 - gax)
+    medium[medium==0] = -1e3
+    axline, = ax.plot(ex, color="black", linewidth=1)
+    ax.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
+    ax.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
+    ax.set(xticks=range(0, nx+1, round(nx//10,-1)))
+    ax.set(xlabel=r"$z\;(cm)$", ylabel=r"$E_x\;(V/m)$")
+    axtime = ax.text(0.02, 0.90, "", transform=ax.transAxes)
+    axepsr = ax.text(0.90, 0.90, "", transform=ax.transAxes)
+    axsigm = ax.text(0.85, 0.80, "", transform=ax.transAxes)
+    plt.subplots_adjust(bottom=0.2, hspace=0.45)
 
-	with writer.saving(fig, "fd1d_2_1.mp4", 300):
-		for t in range(1, ns+1):
-			field(t, nx, gax, gbx, dx, ex, ix, hy, bc)
+    with writer.saving(fig, "fd1d_2_1.mp4", 300):
+        for t in np.arange(1, ns+1).astype(np.int32):
+            dxfield(t, nx, dx, hy)
+            exfield(nx, gax, gbx, dx, ix, ex)
+            hyfield(nx, ex, hy, bc)
 
-			line1.set_ydata(ex)
-			time_text.set_text(rf"T = {t}")
-			epsr_txt1.set_text(rf"epsr = {epsr}")
-			cond_txt1.set_text(rf"$\sigma$ = {sigma}")
-
-			line2.set_ydata(hy)
-			epsr_txt2.set_text(rf"epsr = {epsr}")
-			cond_txt2.set_text(rf"$\sigma$ = {sigma}")
-
-			writer.grab_frame()
+            axline.set_ydata(ex)
+            axtime.set_text(rf"$T$ = {t}")
+            axepsr.set_text(rf"$\epsilon_r$ = {epsr}")
+            axsigm.set_text(rf"$\sigma$ = {sigma} $S/m$")
+            writer.grab_frame()
 
 
 if __name__ == "__main__":
-	main()
+    main()
