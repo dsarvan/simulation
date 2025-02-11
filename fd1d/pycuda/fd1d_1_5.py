@@ -52,7 +52,6 @@ void exfield(int t, int nx, float *ca, float *cb, float *ex, float *hy) {
     /* calculate the Ex field */
     for (int i = idx + 1; i < nx; i += stx)
         ex[i] = ca[i] * ex[i] + cb[i] * (hy[i-1] - hy[i]);
-    __syncthreads();
     /* put a sinusoidal wave at the low end */
     if (idx == 1) ex[1] = ex[1] + sinusoidal(t, 0.01, 700e6);
 }
@@ -66,7 +65,6 @@ void hyfield(int nx, float *ex, float *hy, float *bc) {
     /* calculate the Hy field */
     for (int i = idx; i < nx - 1; i += stx)
         hy[i] = hy[i] + 0.5 * (ex[i] - ex[i+1]);
-    __syncthreads();
 }
 """
 
