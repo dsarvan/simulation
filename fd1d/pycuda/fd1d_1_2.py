@@ -45,7 +45,6 @@ void exfield(int t, int nx, float *ex, float *hy) {
     /* calculate the Ex field */
     for (int i = idx + 1; i < nx; i += stx)
         ex[i] = ex[i] + 0.5 * (hy[i-1] - hy[i]);
-    __syncthreads();
     /* put a Gaussian pulse in the middle */
     if (idx == nx/2) ex[nx/2] = gaussian(t, 40, 12);
 }
@@ -59,7 +58,6 @@ void hyfield(int nx, float *ex, float *hy, float *bc) {
     /* calculate the Hy field */
     for (int i = idx; i < nx - 1; i += stx)
         hy[i] = hy[i] + 0.5 * (ex[i] - ex[i+1]);
-    __syncthreads();
 }
 """
 
