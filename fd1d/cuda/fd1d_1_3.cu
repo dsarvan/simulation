@@ -24,7 +24,6 @@ void exfield(int t, int nx, float *cb, float *ex, float *hy) {
     /* calculate the Ex field */
     for (int i = idx + 1; i < nx; i += stx)
         ex[i] = ex[i] + cb[i] * (hy[i-1] - hy[i]);
-    __syncthreads();
     /* put a Gaussian pulse at the low end */
     if (idx == 1) ex[1] = ex[1] + gaussian(t, 40, 12);
 }
@@ -38,13 +37,12 @@ void hyfield(int nx, float *ex, float *hy, float *bc) {
     /* calculate the Hy field */
     for (int i = idx; i < nx - 1; i += stx)
         hy[i] = hy[i] + 0.5 * (ex[i] - ex[i+1]);
-    __syncthreads();
 }
 
 
 float *dielectric(int nx, float epsr) {
     float *cb;
-    cudaMallocManaged(&cb, nx*sizeof(float));
+    cudaMallocManaged(&cb, nx*sizeof(*cb));
     for (int i = 0; i < nx; cb[i] = 0.5f, i++);
     for (int i = nx/2; i < nx; cb[i] = 0.5/epsr, i++);
     return cb;
@@ -58,8 +56,8 @@ int main() {
 
     float *ex, *hy;
     /* allocate unified memory accessible from host or device */
-    cudaMallocManaged(&ex, nx*sizeof(float));
-    cudaMallocManaged(&hy, nx*sizeof(float));
+    cudaMallocManaged(&ex, nx*sizeof(*ex));
+    cudaMallocManaged(&hy, nx*sizeof(*hy));
 
     /* initialize ex and hy arrays on the host */
     for (int i = 0; i < nx; i++) {
@@ -68,8 +66,8 @@ int main() {
     }
 
     float *bc;
-    cudaMallocManaged(&bc, 4*sizeof(float));
-    bc[4] = {0.0f};
+    cudaMallocManaged(&bc, 4*sizeof(*bc));
+    for (int i = 0; i < 4; bc[i] = 0.0f, i++);
 
     float epsr = 4;  /* relative permittivity */
     float *cb = dielectric(nx, epsr);
