@@ -24,7 +24,6 @@ void exfield(int t, int nx, float *ex, float *hy) {
     /* calculate the Ex field */
     for (int i = idx + 1; i < nx; i += stx)
         ex[i] = ex[i] + 0.5 * (hy[i-1] - hy[i]);
-    __syncthreads();
     /* put a Gaussian pulse in the middle */
     if (idx == nx/2) ex[nx/2] = gaussian(t, 40, 12);
 }
@@ -35,7 +34,6 @@ void hyfield(int nx, float *ex, float *hy) {
     /* calculate the Hy field */
     for (int i = idx; i < nx - 1; i += stx)
         hy[i] = hy[i] + 0.5 * (ex[i] - ex[i+1]);
-    __syncthreads();
 }
 
 
@@ -46,8 +44,8 @@ int main() {
 
     float *ex, *hy;
     /* allocate unified memory accessible from host or device */
-    cudaMallocManaged(&ex, nx*sizeof(float));
-    cudaMallocManaged(&hy, nx*sizeof(float));
+    cudaMallocManaged(&ex, nx*sizeof(*ex));
+    cudaMallocManaged(&hy, nx*sizeof(*hy));
 
     /* initialize ex and hy arrays on the host */
     for (int i = 0; i < nx; i++) {
