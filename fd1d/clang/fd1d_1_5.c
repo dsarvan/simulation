@@ -43,8 +43,8 @@ void hyfield(int nx, double *ex, double *hy, double *bc) {
 
 tuple dielectric(int nx, double dt, double epsr, double sigma) {
     tuple n;
-    n.ca = (double *) calloc(nx, sizeof(n.ca));
-    n.cb = (double *) calloc(nx, sizeof(n.cb));
+    n.ca = (double *) calloc(nx, sizeof(*n.ca));
+    n.cb = (double *) calloc(nx, sizeof(*n.cb));
     for (int i = 0; i < nx; n.ca[i] = 1.0f, i++);
     for (int i = 0; i < nx; n.cb[i] = 0.5f, i++);
     double eps0 = 8.854e-12;  /* vacuum permittivity (F/m) */
