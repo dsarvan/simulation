@@ -79,7 +79,6 @@ def main():
         efield(nx, ny, naz, dz, ez)
         hfield(nx, ny, ez, hx, hy)
 
-    print(ez[2][0:50])
     surfaceplot(ns, nx, ny, ez)
     contourplot(ns, nx, ny, ez)
 
