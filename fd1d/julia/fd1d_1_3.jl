@@ -65,7 +65,6 @@ function main()
         hy[1:nx-1] .+= 0.5 * (ex[1:nx-1] - ex[2:nx])
     end
 
-    println(ex[1:50])
     visualize(ns, nx, epsr, cb, ex)
 end
 
