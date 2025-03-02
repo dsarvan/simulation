@@ -39,11 +39,11 @@ function main()
 
     for t in Int32.(1:ns)
         # calculate the Ex field
-        ex[2:nx] .+= 0.5 * (hy[1:nx-1] - hy[2:nx])
+        @views ex[2:nx] .+= 0.5 .* (hy[1:nx-1] .- hy[2:nx])
         # put a Gaussian pulse in the middle
         ex[div(nx,2)+1] = gaussian(t, 40, 12.0)
         # calculate the Hy field
-        hy[1:nx-1] .+= 0.5 * (ex[1:nx-1] - ex[2:nx])
+        @views hy[1:nx-1] .+= 0.5 .* (ex[1:nx-1] .- ex[2:nx])
     end
 
     visualize(ns, nx, ex)
