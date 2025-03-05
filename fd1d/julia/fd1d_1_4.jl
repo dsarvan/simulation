@@ -58,14 +58,14 @@ function main()
 
     for t in Int32.(1:ns)
         # calculate the Ex field
-        ex[2:nx] .+= cb[2:nx] .* (hy[1:nx-1] - hy[2:nx])
+        @views ex[2:nx] .+= cb[2:nx] .* (hy[1:nx-1] .- hy[2:nx])
         # put a sinusoidal wave at the low end
         ex[2] += sinusoidal(t, 0.01, 700e6)
         # absorbing boundary conditions
         ex[1], bc[1], bc[2] = bc[1], bc[2], ex[2]
         ex[nx], bc[4], bc[3] = bc[4], bc[3], ex[nx-1]
         # calculate the Hy field
-        hy[1:nx-1] .+= 0.5 * (ex[1:nx-1] - ex[2:nx])
+        @views hy[1:nx-1] .+= 0.5 .* (ex[1:nx-1] .- ex[2:nx])
     end
 
     visualize(ns, nx, epsr, cb, ex)
