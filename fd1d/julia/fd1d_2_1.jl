@@ -30,7 +30,7 @@ function visualize(ns::Int, nx::Int, epsr::Float64, sigma::Float64, nax::Vector{
 end
 
 
-mutable struct medium
+struct medium
     nax::Vector{Float64}
     nbx::Vector{Float64}
 end
@@ -69,7 +69,7 @@ end
 function dielectric(nx::Int, dt::Float64, epsr::Float64, sigma::Float64)::medium
     md = medium(
         ones(Float64, nx),
-        zeros(Float64, nx)
+        zeros(Float64, nx),
     )
     eps0::Float64 = 8.854e-12  # vaccum permittivity (F/m)
     md.nax[div(nx,2)+1:nx] .= 1/(epsr + (sigma * dt/eps0))
