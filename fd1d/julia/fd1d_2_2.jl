@@ -69,12 +69,12 @@ end
 
 function fourier(t::Int32, nf::Int, nx::Int, dt::Float64, freq::Vector{Float64}, ex::Vector{Float64}, ft::ftrans)
     # calculate the Fourier transform of Ex field
-    @views ft.r_pt[1:nf,1:nx] += cos.(2*pi*freq[1:nf]*dt*t) .* ex[1:nx]'
-    @views ft.i_pt[1:nf,1:nx] -= sin.(2*pi*freq[1:nf]*dt*t) .* ex[1:nx]'
+    @views ft.r_pt[1:nf,1:nx] .+= cos.(2*pi*freq[1:nf]*dt*t) .* ex[1:nx]'
+    @views ft.i_pt[1:nf,1:nx] .-= sin.(2*pi*freq[1:nf]*dt*t) .* ex[1:nx]'
     if t < div(nx,2)
         # calculate the Fourier transform of input source
-        @views ft.r_in[1:nf] += cos.(2*pi*freq[1:nf]*dt*t) * ex[11]
-        @views ft.i_in[1:nf] -= sin.(2*pi*freq[1:nf]*dt*t) * ex[11]
+        @views ft.r_in[1:nf] .+= cos.(2*pi*freq[1:nf]*dt*t) .* ex[11]
+        @views ft.i_in[1:nf] .-= sin.(2*pi*freq[1:nf]*dt*t) .* ex[11]
     end
 end
 
