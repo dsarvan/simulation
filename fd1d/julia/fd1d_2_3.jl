@@ -89,10 +89,11 @@ function dxfield(t::Int32, nx::Int, dx::Vector{Float64}, hy::Vector{Float64})
 end
 
 
-function exfield(nx::Int, md::medium, dx::Vector{Float64}, ix::Vector{Float64}, ex::Vector{Float64})
+function exfield(nx::Int, md::medium, dx::Vector{Float64}, ix::Vector{Float64}, sx::Vector{Float64}, ex::Vector{Float64})
     # calculate the Ex field from Dx
-    @views ex[2:nx] .= md.nax[2:nx] .* (dx[2:nx] .- ix[2:nx])
+    @views ex[2:nx] .= md.nax[2:nx] .* (dx[2:nx] .- ix[2:nx] .- md.ncx[2:nx] .* sx[2:nx])
     @views ix[2:nx] .= ix[2:nx] .+ md.nbx[2:nx] .* ex[2:nx]
+    @views sx[2:nx] .= md.ncx[2:nx] .* sx[2:nx] .+ md.ndx[2:nx] .* ex[2:nx]
 end
 
 
@@ -129,6 +130,7 @@ function main()
     dx = zeros(Float64, nx)
     ex = zeros(Float64, nx)
     ix = zeros(Float64, nx)
+    sx = zeros(Float64, nx)
     hy = zeros(Float64, nx)
 
     bc = zeros(Float64, 4)
@@ -137,12 +139,12 @@ function main()
     dt::Float64 = ds/6e8  # time step (s)
     chi::Float64 = 2.0  # relaxation susceptibility
     tau::Float64 = 0.001e-6  # relaxation time (s)
-    epsr::Float64 = 4.0  # relative permittivity
-    sigma::Float64 = 0.0  # conductivity (S/m)
+    epsr::Float64 = 2.0  # relative permittivity
+    sigma::Float64 = 0.01  # conductivity (S/m)
     md::medium = dielectric(nx, dt, chi, tau, epsr, sigma)
 
-    # frequency 100 MHz, 200 MHz, 500 MHz
-    freq = Float64[100e6, 200e6, 500e6]
+    # frequency 50 MHz, 200 MHz, 500 MHz
+    freq = Float64[50e6, 200e6, 500e6]
     nf::Int = length(freq)  # number of frequencies
 
     ft = ftrans(
@@ -157,7 +159,7 @@ function main()
 
     for t in Int32.(1:ns)
         dxfield(t, nx, dx, hy)
-        exfield(nx, md, dx, ix, ex)
+        exfield(nx, md, dx, ix, sx, ex)
         fourier(t, nf, nx, dt, freq, ex, ft)
         hyfield(nx, ex, hy, bc)
     end
