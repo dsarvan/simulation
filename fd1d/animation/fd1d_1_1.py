@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# File: fd0d_1_1.py
+# File: fd1d_1_1.py
 # Name: D.Saravanan
 # Date: 11/10/2021
 
@@ -28,7 +28,7 @@ def main():
     # define the meta data for the movie
     fwriter = animation.writers["ffmpeg"]
     data = {"title": "Simulation in free space"}
-    writer = fwriter(fps=15, metadata=data)
+    writer = fwriter(fps=15, codec='h264', bitrate=2000, metadata=data)
 
     # draw an empty plot, but preset the plot x- and y- limits
     fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace": 0.2})
