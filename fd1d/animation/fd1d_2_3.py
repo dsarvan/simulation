@@ -117,7 +117,7 @@ def main():
     # define the meta data for the movie
     fwriter = animation.writers["ffmpeg"]
     data = {"title": "Calculating the frequency domain output of Debye medium"}
-    writer = fwriter(fps=15, metadata=data)
+    writer = fwriter(fps=15, codec='h264', bitrate=2000, metadata=data)
 
     # draw an empty plot, but preset the plot x- and y- limits
     fig, (ax1, ax2) = plt.subplots(2, sharex=False, gridspec_kw={"hspace": 0.4})
