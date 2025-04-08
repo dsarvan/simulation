@@ -11,7 +11,7 @@ plt.matplotlib.style.use("classic")
 plt.matplotlib.style.use("../pyplot.mplstyle")
 
 
-function visualize(ns::Int, nx::Int, epsr::Float64, cb::Vector{Float64}, ex::Vector{Float64})::Nothing
+function visualize(ns::Int, nx::Int, epsr::Float64, cb::Array{Float64}, ex::Array{Float64})::Nothing
     fig, ax = plt.subplots(figsize=(8,3), gridspec_kw=Dict("hspace" => 0.2))
     fig.suptitle(raw"FDTD simulation of a sinusoidal striking dielectric material")
     medium = epsr > 1 ? (div.(0.5,cb) .- 1)/(epsr - 1)*1e3 : div.(0.5,cb) .- 1
@@ -34,7 +34,7 @@ function sinusoidal(t::Int32, ds::Float64, freq::Float64)::Float64
 end
 
 
-function dielectric(nx::Int, epsr::Float64)::Vector{Float64}
+function dielectric(nx::Int, epsr::Float64)::Array{Float64}
     cb = 0.5 * ones(Float64, nx)
     cb[div(nx,2)+1:nx] .= 0.5/epsr
     return cb
@@ -54,7 +54,7 @@ function main()
     ds::Float64 = 0.01  # spatial step (m)
     dt::Float64 = ds/6e8  # time step (s)
     epsr::Float64 = 4.0  # relative permittivity
-    cb::Vector{Float64} = dielectric(nx, epsr)
+    cb::Array{Float64} = dielectric(nx, epsr)
 
     for t in Int32.(1:ns)
         # calculate the Ex field
