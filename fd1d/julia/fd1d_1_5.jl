@@ -12,7 +12,7 @@ plt.matplotlib.style.use("classic")
 plt.matplotlib.style.use("../pyplot.mplstyle")
 
 
-function visualize(ns::Int, nx::Int, epsr::Float64, sigma::Float64, cb::Vector{Float64}, ex::Vector{Float64})::Nothing
+function visualize(ns::Int, nx::Int, epsr::Float64, sigma::Float64, cb::Array{Float64}, ex::Array{Float64})::Nothing
     fig, ax = plt.subplots(figsize=(8,3), gridspec_kw=Dict("hspace" => 0.2))
     fig.suptitle(raw"FDTD simulation of a sinusoidal striking lossy dielectric material")
     medium = epsr > 1 ? (div.(0.5,cb) .- 1)/(epsr - 1)*1e3 : div.(0.5,cb) .- 1
