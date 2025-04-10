@@ -12,7 +12,7 @@ plt.matplotlib.style.use("classic")
 plt.matplotlib.style.use("../pyplot.mplstyle")
 
 
-function visualize(ns::Int, nx::Int, epsr::Float64, sigma::Float64, nax::Vector{Float64}, ex::Vector{Float64})::Nothing
+function visualize(ns::Int, nx::Int, epsr::Float64, sigma::Float64, nax::Array{Float64}, ex::Array{Float64})::Nothing
     fig, ax = plt.subplots(figsize=(8,3), gridspec_kw=Dict("hspace" => 0.2))
     fig.suptitle(raw"FDTD simulation of a sinusoidal striking lossy dielectric material")
     medium = epsr > 1 ? (1 .- nax)/(1 - nax[end])*1e3 : (1 .- nax)
@@ -31,8 +31,8 @@ end
 
 
 struct medium
-    nax::Vector{Float64}
-    nbx::Vector{Float64}
+    nax::Array{Float64}
+    nbx::Array{Float64}
 end
 
 
@@ -42,7 +42,7 @@ function sinusoidal(t::Int32, ds::Float64, freq::Float64)::Float64
 end
 
 
-function dxfield(t::Int32, nx::Int, dx::Vector{Float64}, hy::Vector{Float64})
+function dxfield(t::Int32, nx::Int, dx::Array{Float64}, hy::Array{Float64})
     # calculate the electric flux density Dx
     @views dx[2:nx] .+= 0.5 .* (hy[1:nx-1] .- hy[2:nx])
     # put a sinusoidal wave at the low end
@@ -50,14 +50,14 @@ function dxfield(t::Int32, nx::Int, dx::Vector{Float64}, hy::Vector{Float64})
 end
 
 
-function exfield(nx::Int, md::medium, dx::Vector{Float64}, ix::Vector{Float64}, ex::Vector{Float64})
+function exfield(nx::Int, md::medium, dx::Array{Float64}, ix::Array{Float64}, ex::Array{Float64})
     # calculate the Ex field from Dx
     @views ex[2:nx] .= md.nax[2:nx] .* (dx[2:nx] .- ix[2:nx])
     @views ix[2:nx] .= ix[2:nx] .+ md.nbx[2:nx] .* ex[2:nx]
 end
 
 
-function hyfield(nx::Int, ex::Vector{Float64}, hy::Vector{Float64}, bc::Vector{Float64})
+function hyfield(nx::Int, ex::Array{Float64}, hy::Array{Float64}, bc::Array{Float64})
     # absorbing boundary conditions
     ex[1], bc[1], bc[2] = bc[1], bc[2], ex[2]
     ex[nx], bc[4], bc[3] = bc[4], bc[3], ex[nx-1]
