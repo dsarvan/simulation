@@ -12,7 +12,7 @@ plt.matplotlib.style.use("classic")
 plt.matplotlib.style.use("../pyplot.mplstyle")
 
 
-function visualize(ns::Int, nx::Int, epsr::Float64, sigma::Float64, nax::Vector{Float64}, ex::Vector{Float64})::Nothing
+function visualize(ns::Int, nx::Int, epsr::Float64, sigma::Float64, nax::Array{Float64}, ex::Array{Float64})::Nothing
     fig, ax = plt.subplots(figsize=(8,3), gridspec_kw=Dict("hspace" => 0.2))
     fig.suptitle(raw"FDTD simulation of a pulse striking Debye dielectric material")
     medium = epsr > 1 ? (1 .- nax)/(1 - nax[end])*1e3 : (1 .- nax)
@@ -30,7 +30,7 @@ function visualize(ns::Int, nx::Int, epsr::Float64, sigma::Float64, nax::Vector{
 end
 
 
-function amplitude(ns::Int, nx::Int, epsr::Float64, sigma::Float64, nax::Vector{Float64}, amp::Vector{Float64})::Nothing
+function amplitude(ns::Int, nx::Int, epsr::Float64, sigma::Float64, nax::Array{Float64}, amp::Array{Float64})::Nothing
     fig, ax = plt.subplots(figsize=(8,3), gridspec_kw=Dict("hspace" => 0.2))
     fig.suptitle(raw"The discrete Fourier transform with pulse as its source")
     medium = epsr > 1 ? (1 .- nax)/(1 - nax[end])*1e3 : (1 .- nax)
@@ -49,18 +49,18 @@ end
 
 
 struct medium
-    nax::Vector{Float64}
-    nbx::Vector{Float64}
-    ncx::Vector{Float64}
-    ndx::Vector{Float64}
+    nax::Array{Float64}
+    nbx::Array{Float64}
+    ncx::Array{Float64}
+    ndx::Array{Float64}
 end
 
 
 struct ftrans
-    r_pt::Matrix{Float64}
-    i_pt::Matrix{Float64}
-    r_in::Matrix{Float64}
-    i_in::Matrix{Float64}
+    r_pt::Array{Float64}
+    i_pt::Array{Float64}
+    r_in::Array{Float64}
+    i_in::Array{Float64}
 end
 
 
@@ -69,7 +69,7 @@ function gaussian(t::Int32, t0::Int, sigma::Float64)::Float64
 end
 
 
-function fourier(t::Int32, nf::Int, nx::Int, dt::Float64, freq::Vector{Float64}, ex::Vector{Float64}, ft::ftrans)
+function fourier(t::Int32, nf::Int, nx::Int, dt::Float64, freq::Array{Float64}, ex::Array{Float64}, ft::ftrans)
     # calculate the Fourier transform of Ex field
     @views ft.r_pt[1:nf,1:nx] .+= cos.(2*pi*freq[1:nf]*dt*t) .* ex[1:nx]'
     @views ft.i_pt[1:nf,1:nx] .-= sin.(2*pi*freq[1:nf]*dt*t) .* ex[1:nx]'
@@ -81,7 +81,7 @@ function fourier(t::Int32, nf::Int, nx::Int, dt::Float64, freq::Vector{Float64},
 end
 
 
-function dxfield(t::Int32, nx::Int, dx::Vector{Float64}, hy::Vector{Float64})
+function dxfield(t::Int32, nx::Int, dx::Array{Float64}, hy::Array{Float64})
     # calculate the electric flux density Dx
     @views dx[2:nx] .+= 0.5 .* (hy[1:nx-1] .- hy[2:nx])
     # put a Gaussian pulse at the low end
@@ -89,7 +89,7 @@ function dxfield(t::Int32, nx::Int, dx::Vector{Float64}, hy::Vector{Float64})
 end
 
 
-function exfield(nx::Int, md::medium, dx::Vector{Float64}, ix::Vector{Float64}, sx::Vector{Float64}, ex::Vector{Float64})
+function exfield(nx::Int, md::medium, dx::Array{Float64}, ix::Array{Float64}, sx::Array{Float64}, ex::Array{Float64})
     # calculate the Ex field from Dx
     @views ex[2:nx] .= md.nax[2:nx] .* (dx[2:nx] .- ix[2:nx] .- md.ncx[2:nx] .* sx[2:nx])
     @views ix[2:nx] .= ix[2:nx] .+ md.nbx[2:nx] .* ex[2:nx]
@@ -97,7 +97,7 @@ function exfield(nx::Int, md::medium, dx::Vector{Float64}, ix::Vector{Float64}, 
 end
 
 
-function hyfield(nx::Int, ex::Vector{Float64}, hy::Vector{Float64}, bc::Vector{Float64})
+function hyfield(nx::Int, ex::Array{Float64}, hy::Array{Float64}, bc::Array{Float64})
     # absorbing boundary conditions
     ex[1], bc[1], bc[2] = bc[1], bc[2], ex[2]
     ex[nx], bc[4], bc[3] = bc[4], bc[3], ex[nx-1]
