@@ -61,8 +61,8 @@ def main():
 
     # define the meta data for the movie
     fwriter = animation.writers["ffmpeg"]
-    data = {"title": "Simulation in free space"}
-    writer = fwriter(fps=15, metadata=data)
+    data = {"title": "Simulation in free space in the transverse magnetic (TM) mode"}
+    writer = fwriter(fps=15, codec='h264', bitrate=2000, metadata=data)
 
     # draw an empty plot, but preset the plot x-, y- and z- limits
     fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
