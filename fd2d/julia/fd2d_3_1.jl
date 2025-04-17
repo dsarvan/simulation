@@ -6,7 +6,6 @@
 """ Simulation of a pulse in free space in the transverse magnetic (TM) mode """
 
 import PyPlot as plt
-using Printf
 
 plt.matplotlib.style.use("classic")
 plt.matplotlib.style.use("../pyplot.mplstyle")
@@ -15,7 +14,7 @@ plt.matplotlib.style.use("../pyplot.mplstyle")
 meshgrid(xs, ys) = [xs[i] for i in 1:length(xs), j in 1:length(ys)], [ys[j] for i in 1:length(xs), j in 1:length(ys)]
 
 
-function surfaceplot(ns::Int, nx::Int, ny::Int, ez::Matrix{Float64})::Nothing
+function surfaceplot(ns::Int, nx::Int, ny::Int, ez::Array{Float64})::Nothing
     fig, ax = plt.subplots(subplot_kw=Dict("projection" => "3d"))
     fig.suptitle(raw"FDTD simulation of a pulse in free space")
     xv, yv = meshgrid(0:nx-1, 0:ny-1)
@@ -29,7 +28,7 @@ function surfaceplot(ns::Int, nx::Int, ny::Int, ez::Matrix{Float64})::Nothing
 end
 
 
-function contourplot(ns::Int, nx::Int, ny::Int, ez::Matrix{Float64})::Nothing
+function contourplot(ns::Int, nx::Int, ny::Int, ez::Array{Float64})::Nothing
     fig, ax = plt.subplots(figsize=(4,4), gridspec_kw=Dict("hspace" => 0.2))
     fig.suptitle(raw"FDTD simulation of a pulse in free space")
     xv, yv = meshgrid(0:nx-1, 0:ny-1)
@@ -47,7 +46,7 @@ function gaussian(t::Int32, t0::Int, sigma::Float64)::Float64
 end
 
 
-function dfield(t::Int32, nx::Int, ny::Int, dz::Matrix{Float64}, hx::Matrix{Float64}, hy::Matrix{Float64})
+function dfield(t::Int32, nx::Int, ny::Int, dz::Array{Float64}, hx::Array{Float64}, hy::Array{Float64})
     """ calculate the electric flux density Dz """
     @views dz[2:ny,2:nx] .+= 0.5 .* (hy[2:ny,2:nx] .- hy[1:ny-1,2:nx] .- hx[2:ny,2:nx] .+ hx[2:ny,1:nx-1])
     # put a Gaussian pulse in the middle
@@ -55,13 +54,13 @@ function dfield(t::Int32, nx::Int, ny::Int, dz::Matrix{Float64}, hx::Matrix{Floa
 end
 
 
-function efield(nx::Int, ny::Int, naz::Matrix{Float64}, dz::Matrix{Float64}, ez::Matrix{Float64})
+function efield(nx::Int, ny::Int, naz::Array{Float64}, dz::Array{Float64}, ez::Array{Float64})
     """ calculate the Ez field from Dz """
     @views ez[2:ny,2:nx] .= naz[2:ny,2:nx] .* dz[2:ny,2:nx]
 end
 
 
-function hfield(nx::Int, ny::Int, ez::Matrix{Float64}, hx::Matrix{Float64}, hy::Matrix{Float64})
+function hfield(nx::Int, ny::Int, ez::Array{Float64}, hx::Array{Float64}, hy::Array{Float64})
     """ calculate the Hx and Hy field """
     @views hx[1:ny-1,1:nx-1] .+= 0.5 .* (ez[1:ny-1,1:nx-1] .- ez[1:ny-1,2:nx])
     @views hy[1:ny-1,1:nx-1] .+= 0.5 .* (ez[2:ny,1:nx-1] .- ez[1:ny-1,1:nx-1])
