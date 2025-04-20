@@ -1,0 +1,226 @@
+#!/usr/bin/env python
+# File: fd2d_3_2.py
+# Name: D.Saravanan
+# Date: 18/01/2022
+
+""" Simulation of a propagating sinusoidal in free space in the transverse
+magnetic (TM) mode with the two-dimensional perfectly matched layer (PML) """
+
+import matplotlib.pyplot as plt
+import mpl_toolkits.mplot3d.axes3d
+from collections import namedtuple
+import numpy as np
+
+import pycuda.autoinit
+import pycuda.driver as drv
+from pycuda import gpuarray
+from pycuda.compiler import SourceModule
+
+plt.style.use("classic")
+plt.style.use("../pyplot.mplstyle")
+
+
+def surfaceplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    fig.suptitle(r"FDTD simulation of a sinusoidal in free space with PML")
+    xv, yv = np.meshgrid(np.arange(nx), np.arange(ny))
+    ax.plot_surface(xv, yv, ez, rstride=1, cstride=1, cmap="gray", lw=0.25)
+    ax.text2D(0.8, 0.7, rf"$T$ = {ns}", transform=ax.transAxes)
+    ax.set(xlim=(0, nx), ylim=(0, ny), zlim=(0, 1))
+    ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$", zlabel=r"$E_z\;(V/m)$")
+    ax.zaxis.set_rotate_label(False)
+    ax.view_init(elev=20.0, azim=45)
+    plt.show()
+
+
+def contourplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
+    fig, ax = plt.subplots(figsize=(4,4), gridspec_kw={"hspace": 0.2})
+    fig.suptitle(r"FDTD simulation of a sinusoidal in free space with PML")
+    xv, yv = np.meshgrid(np.arange(nx), np.arange(ny))
+    ax.contourf(xv, yv, ez, cmap="gray", alpha=0.75)
+    ax.contour(xv, yv, ez, colors="k", linewidths=0.25)
+    ax.set(xlim=(0, nx-1), ylim=(0, ny-1), aspect="equal")
+    ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$")
+    plt.subplots_adjust(bottom=0.2, hspace=0.45)
+    plt.show()
+
+
+pmlayer = namedtuple('pmlayer', (
+    'fx1',
+    'fx2',
+    'fx3',
+    'fy1',
+    'fy2',
+    'fy3',
+    'gx2',
+    'gx3',
+    'gy2',
+    'gy3',
+))
+
+
+kernel = """
+#define idx (blockIdx.x * blockDim.x + threadIdx.x)
+#define idy (blockIdx.y * blockDim.y + threadIdx.y)
+#define stx (blockDim.x * gridDim.x)
+#define sty (blockDim.y * gridDim.y)
+
+
+typedef struct {
+    float *fx1;
+    float *fx2;
+    float *fx3;
+    float *fy1;
+    float *fy2;
+    float *fy3;
+    float *gx2;
+    float *gx3;
+    float *gy2;
+    float *gy3;
+} pmlayer;
+
+
+__device__
+float sinusoidal(int t, float ds, float freq) {
+    float dt = ds/6e8;  /* time step (s) */
+    return sin(2 * M_PI * freq * dt * t);
+}
+
+
+__global__
+void pmlparam(int npml, int nx, int ny, pmlayer *pml) {
+    /* calculate the two-dimensional perfectly matched layer (PML) parameters */
+    for (int n = threadIdx.x; n < npml; n += blockDim.x) {
+        float xm = 0.33 * (npml-n)/npml*(npml-n)/npml*(npml-n)/npml;
+        float xn = 0.33 * (npml-n-0.5)/npml*(npml-n-0.5)/npml*(npml-n-0.5)/npml;
+        pml->fx1[n] = pml->fx1[nx-2-n] = pml->fy1[n] = pml->fy1[ny-2-n] = xn;
+        pml->fx2[n] = pml->fx2[nx-2-n] = pml->fy2[n] = pml->fy2[ny-2-n] = 1/(1+xn);
+        pml->gx2[n] = pml->gx2[nx-1-n] = pml->gy2[n] = pml->gy2[ny-1-n] = 1/(1+xm);
+        pml->fx3[n] = pml->fx3[nx-2-n] = pml->fy3[n] = pml->fy3[ny-2-n] = (1-xn)/(1+xn);
+        pml->gx3[n] = pml->gx3[nx-1-n] = pml->gy3[n] = pml->gy3[ny-1-n] = (1-xm)/(1+xm);
+    }
+}
+
+
+__global__
+void dfield(int t, int nx, int ny, pmlayer *pml, float *dz, float *hx, float *hy) {
+    /* calculate the electric flux density Dz */
+    for (int j = idy + 1; j < ny; j += sty) {
+        for (int i = idx + 1; i < nx; i += stx) {
+            int n = j*nx+i;
+            dz[n] = pml->gy3[j] * pml->gx3[i] * dz[n] + pml->gy2[j] * pml->gx2[i] * 0.5 * (hy[n] - hy[n-nx] - hx[n] + hx[n-1]);
+        }
+    }
+    /* put a sinusoidal source at a point that is offset five cells
+     * from the center of the problem space in each direction */
+    if ((idy == ny/2-5) && (idx == nx/2-5))
+        dz[(ny/2-5)*nx+(nx/2-5)] = sinusoidal(t, 0.01, 1500e6);
+}
+
+
+__global__
+void efield(int nx, int ny, float *naz, float *dz, float *ez) {
+    /* calculate the Ez field from Dz */
+    for (int j = idy; j < ny; j += sty) {
+        for (int i = idx; i < nx; i += stx) {
+            int n = j*nx+i;
+            ez[n] = naz[n] * dz[n];
+        }
+    }
+}
+
+
+__global__
+void hfield(int nx, int ny, pmlayer *pml, float *ez, float *ihx, float *ihy, float *hx, float *hy) {
+    /* calculate the Hx and Hy field */
+    for (int j = idy; j < ny - 1; j += sty) {
+        for (int i = idx; i < nx - 1; i += stx) {
+            int n = j*nx+i;
+            float curl_em = ez[n] - ez[n+1];
+            float curl_en = ez[n] - ez[n+nx];
+            ihx[n] += curl_em;
+            ihy[n] += curl_en;
+            hx[n] = pml->fx3[i] * hx[n] + pml->fx2[i] * (0.5 * curl_em + pml->fy1[j] * ihx[n]);
+            hy[n] = pml->fy3[j] * hy[n] - pml->fy2[j] * (0.5 * curl_en + pml->fx1[i] * ihy[n]);
+        }
+    }
+}
+"""
+
+
+def main():
+
+    nx = np.int32(60)  # number of grid points
+    ny = np.int32(60)  # number of grid points
+
+    ns = np.int32(100)  # number of time steps
+
+    dz = gpuarray.zeros(nx*ny, dtype=np.float32)
+    ez = gpuarray.zeros(nx*ny, dtype=np.float32)
+    hx = gpuarray.zeros(nx*ny, dtype=np.float32)
+    hy = gpuarray.zeros(nx*ny, dtype=np.float32)
+
+    ihx = gpuarray.zeros(nx*ny, dtype=np.float32)
+    ihy = gpuarray.zeros(nx*ny, dtype=np.float32)
+
+    naz = gpuarray.ones(nx*ny, dtype=np.float32)
+
+    ds: float = np.float32(0.01)  # spatial step (m)
+    dt: float = np.float32(ds/6e8)  # time step (s)
+
+    pml = pmlayer(
+        fx1 = gpuarray.zeros(nx, dtype=np.float32),
+        fx2 = gpuarray.ones(nx, dtype=np.float32),
+        fx3 = gpuarray.ones(nx, dtype=np.float32),
+        fy1 = gpuarray.zeros(ny, dtype=np.float32),
+        fy2 = gpuarray.ones(ny, dtype=np.float32),
+        fy3 = gpuarray.ones(ny, dtype=np.float32),
+        gx2 = gpuarray.ones(nx, dtype=np.float32),
+        gx3 = gpuarray.ones(nx, dtype=np.float32),
+        gy2 = gpuarray.ones(ny, dtype=np.float32),
+        gy3 = gpuarray.ones(ny, dtype=np.float32),
+    )
+
+    pmlptr = gpuarray.to_gpu(np.array([
+        pml.fx1.ptr,
+        pml.fx2.ptr,
+        pml.fx3.ptr,
+        pml.fy1.ptr,
+        pml.fy2.ptr,
+        pml.fy3.ptr,
+        pml.gx2.ptr,
+        pml.gx3.ptr,
+        pml.gy2.ptr,
+        pml.gy3.ptr,
+    ], dtype=np.uint64)).gpudata
+
+    blockDimx: int = 16
+    blockDimy: int = 16
+    gridDimx: int = int((nx + blockDimx - 1)/blockDimx)
+    gridDimy: int = int((ny + blockDimy - 1)/blockDimy)
+
+    gridDim = (gridDimx,gridDimy,1)
+    blockDim = (blockDimx,blockDimy,1)
+
+    mod = SourceModule(kernel)
+    pmlparam = mod.get_function("pmlparam")
+    dfield = mod.get_function("dfield")
+    efield = mod.get_function("efield")
+    hfield = mod.get_function("hfield")
+
+    npml: int = np.int32(8)  # pml thickness
+    pmlparam(npml, nx, ny, pmlptr, grid=gridDim, block=blockDim)
+
+    for t in np.arange(1, ns+1).astype(np.int32):
+        dfield(t, nx, ny, pmlptr, dz, hx, hy, grid=gridDim, block=blockDim)
+        efield(nx, ny, naz, dz, ez, grid=gridDim, block=blockDim)
+        hfield(nx, ny, pmlptr, ez, ihx, ihy, hx, hy, grid=gridDim, block=blockDim)
+
+    drv.Context.synchronize()
+
+    surfaceplot(ns, nx, ny, ez.get().reshape(ny,nx))
+    contourplot(ns, nx, ny, ez.get().reshape(ny,nx))
+
+
+if __name__ == "__main__":
+    main()
