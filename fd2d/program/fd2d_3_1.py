@@ -22,7 +22,7 @@ def surfaceplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
     ax.set(xlim=(0, nx), ylim=(0, ny), zlim=(0, 1))
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$", zlabel=r"$E_z\;(V/m)$")
     ax.zaxis.set_rotate_label(False); ax.view_init(elev=20.0, azim=45)
-    plt.savefig("fd2d_surface_3_1.png", dpi=600)
+    plt.savefig("fd2d_surface_3_1.png", dpi=100)
 
 
 def contourplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
@@ -34,7 +34,7 @@ def contourplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
     ax.set(xlim=(0, nx-1), ylim=(0, ny-1), aspect="equal")
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$")
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
-    plt.savefig("fd2d_contour_3_1.png", dpi=600)
+    plt.savefig("fd2d_contour_3_1.png", dpi=100)
 
 
 def gaussian(t: int, t0: int, sigma: float) -> float:
