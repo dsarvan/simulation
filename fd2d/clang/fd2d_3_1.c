@@ -16,22 +16,22 @@ double gaussian(int t, int t0, double sigma) {
 
 void dfield(int t, int nx, int ny, double *dz, double *hx, double *hy) {
     /* calculate the electric flux density Dz */
-    for (int j = 1; j < ny; j++) {
-        for (int i = 1; i < nx; i++) {
-            int n = j*nx+i;
-            dz[n] += 0.5 * (hy[n] - hy[n-nx] - hx[n] + hx[n-1]);
+    for (int i = 1; i < nx; i++) {
+        for (int j = 1; j < ny; j++) {
+            int n = i*ny+j;
+            dz[n] += 0.5 * (hy[n] - hy[n-ny] - hx[n] + hx[n-1]);
         }
     }
     /* put a Gaussian pulse in the middle */
-    dz[ny/2*nx+nx/2] = gaussian(t, 20, 6);
+    dz[nx/2*ny+ny/2] = gaussian(t, 20, 6);
 }
 
 
 void efield(int nx, int ny, double *naz, double *dz, double *ez) {
     /* calculate the Ez field from Dz */
-    for (int j = 1; j < ny; j++) {
-        for (int i = 1; i < nx; i++) {
-            int n = j*nx+i;
+    for (int i = 0; i < nx; i++) {
+        for (int j = 0; j < ny; j++) {
+            int n = i*ny+j;
             ez[n] = naz[n] * dz[n];
         }
     }
@@ -40,11 +40,11 @@ void efield(int nx, int ny, double *naz, double *dz, double *ez) {
 
 void hfield(int nx, int ny, double *ez, double *hx, double *hy) {
     /* calculate the Hx and Hy field */
-    for (int j = 0; j < ny - 1; j++) {
-        for (int i = 0; i < nx - 1; i++) {
-            int n = j*nx+i;
+    for (int i = 0; i < nx - 1; i++) {
+        for (int j = 0; j < ny - 1; j++) {
+            int n = i*ny+j;
             hx[n] += 0.5 * (ez[n] - ez[n+1]);
-            hy[n] += 0.5 * (ez[n+nx] - ez[n]);
+            hy[n] -= 0.5 * (ez[n] - ez[n+ny]);
         }
     }
 }
@@ -63,7 +63,7 @@ int main() {
     double *hy = (double *) calloc(nx*ny, sizeof(*hy));
 
     double *naz = (double *) calloc(nx*ny, sizeof(*naz));
-    for (int i = 0; i < nx*ny; naz[i] = 1.0f, i++);
+    for (int i = 0; i < nx*ny; naz[i] = 1.0, i++);
 
     for (int t = 1; t <= ns; t++) {
         dfield(t, nx, ny, dz, hx, hy);
