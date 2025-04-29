@@ -24,23 +24,24 @@ float gaussian(int t, int t0, float sigma) {
 __global__
 void dfield(int t, int nx, int ny, float *dz, float *hx, float *hy) {
     /* calculate the electric flux density Dz */
-    for (int j = idy + 1; j < ny; j += sty) {
-        for (int i = idx + 1; i < nx; i += stx) {
-            int n = j*nx+i;
-            dz[n] += 0.5 * (hy[n] - hy[n-nx] - hx[n] + hx[n-1]);
+    for (int i = idy + 1; i < nx; i += sty) {
+        for (int j = idx + 1; j < ny; j += stx) {
+            int n = i*ny+j;
+            dz[n] += 0.5 * (hy[n] - hy[n-ny] - hx[n] + hx[n-1]);
         }
     }
+    __syncthreads();
     /* put a Gaussian pulse in the middle */
-    if ((idy == ny/2) && (idx == nx/2)) dz[ny/2*nx+nx/2] = gaussian(t, 20, 6);
+    if (idy == nx/2 && idx == ny/2) dz[nx/2*ny+ny/2] = gaussian(t, 20, 6);
 }
 
 
 __global__
 void efield(int nx, int ny, float *naz, float *dz, float *ez) {
     /* calculate the Ez field from Dz */
-    for (int j = idy + 1; j < ny; j += sty) {
-        for (int i = idx + 1; i < nx; i += stx) {
-            int n = j*nx+i;
+    for (int i = idy; i < nx; i += sty) {
+        for (int j = idx; j < ny; j += stx) {
+            int n = i*ny+j;
             ez[n] = naz[n] * dz[n];
         }
     }
@@ -50,11 +51,11 @@ void efield(int nx, int ny, float *naz, float *dz, float *ez) {
 __global__
 void hfield(int nx, int ny, float *ez, float *hx, float *hy) {
     /* calculate the Hx and Hy field */
-    for (int j = idy; j < ny - 1; j += sty) {
-        for (int i = idx; i < nx - 1; i += stx) {
-            int n = j*nx+i;
+    for (int i = idy; i < nx - 1; i += sty) {
+        for (int j = idx; j < ny - 1; j += stx) {
+            int n = i*ny+j;
             hx[n] += 0.5 * (ez[n] - ez[n+1]);
-            hy[n] += 0.5 * (ez[n+nx] - ez[n]);
+            hy[n] -= 0.5 * (ez[n] - ez[n+ny]);
         }
     }
 }
@@ -89,8 +90,8 @@ int main() {
     dim3 gridDim, blockDim;
     blockDim.x = 16;
     blockDim.y = 16;
-    gridDim.x = (nx + blockDim.x - 1)/blockDim.x;
-    gridDim.y = (ny + blockDim.y - 1)/blockDim.y;
+    gridDim.x = (ny + blockDim.x - 1)/blockDim.x;
+    gridDim.y = (nx + blockDim.y - 1)/blockDim.y;
 
     for (int t = 1; t <= ns; t++) {
         dfield<<<gridDim, blockDim>>>(t, nx, ny, dz, hx, hy);
