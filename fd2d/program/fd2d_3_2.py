@@ -18,26 +18,25 @@ plt.style.use("../pyplot.mplstyle")
 def surfaceplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
     fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
     fig.suptitle(r"FDTD simulation of a sinusoidal in free space with PML")
-    xv, yv = np.meshgrid(np.arange(nx), np.arange(ny))
-    ax.plot_surface(xv, yv, ez, rstride=1, cstride=1, cmap="gray", lw=0.25)
-    ax.text2D(0.8, 0.7, rf"$T$ = {ns}", transform=ax.transAxes)
+    xv, yv = np.meshgrid(np.arange(ny), np.arange(nx))
+    ax.plot_surface(yv, xv, ez, rstride=1, cstride=1, cmap="gray", lw=0.25)
+    ax.text2D(0.1, 0.7, rf"$T$ = {ns}", transform=ax.transAxes)
     ax.set(xlim=(0, nx), ylim=(0, ny), zlim=(0, 1))
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$", zlabel=r"$E_z\;(V/m)$")
-    ax.zaxis.set_rotate_label(False)
-    ax.view_init(elev=20.0, azim=45)
-    plt.savefig("fd2d_surface_3_2.png")
+    ax.zaxis.set_rotate_label(False); ax.view_init(elev=20.0, azim=45)
+    plt.savefig("fd2d_surface_3_2.png", dpi=100)
 
 
 def contourplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
     fig, ax = plt.subplots(figsize=(4,4), gridspec_kw={"hspace": 0.2})
     fig.suptitle(r"FDTD simulation of a sinusoidal in free space with PML")
-    xv, yv = np.meshgrid(np.arange(nx), np.arange(ny))
-    ax.contourf(xv, yv, ez, cmap="gray", alpha=0.75)
-    ax.contour(xv, yv, ez, colors="k", linewidths=0.25)
+    xv, yv = np.meshgrid(np.arange(ny), np.arange(nx))
+    ax.contourf(yv, xv, ez, cmap="gray", alpha=0.75)
+    ax.contour(yv, xv, ez, colors="k", linewidths=0.25)
     ax.set(xlim=(0, nx-1), ylim=(0, ny-1), aspect="equal")
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$")
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
-    plt.savefig("fd2d_contour_3_2.png")
+    plt.savefig("fd2d_contour_3_2.png", dpi=100)
 
 
 pmlayer = namedtuple('pmlayer', (
@@ -73,25 +72,25 @@ def pmlparam(npml: int, nx: int, ny: int, pml: pmlayer) -> None:
 
 def dfield(t: int, nx: int, ny: int, pml: pmlayer, dz: np.ndarray, hx: np.ndarray, hy: np.ndarray) -> None:
     """ calculate the electric flux density Dz """
-    dz[1:ny,1:nx] = pml.gy3[1:ny,None] * pml.gx3[1:nx] * dz[1:ny,1:nx] + pml.gy2[1:ny,None] * pml.gx2[1:nx] * 0.5 * (hy[1:ny,1:nx] - hy[0:ny-1,1:nx] - hx[1:ny,1:nx] + hx[1:ny,0:nx-1])
+    dz[1:nx,1:ny] = pml.gx3[1:nx,None] * pml.gy3[1:ny] * dz[1:nx,1:ny] + pml.gx2[1:nx,None] * pml.gy2[1:ny] * 0.5 * (hy[1:nx,1:ny] - hy[0:nx-1,1:ny] - hx[1:nx,1:ny] + hx[1:nx,0:ny-1])
     # put a sinusoidal source at a point that is offset five cells
     # from the center of the problem space in each direction
-    dz[ny//2-5,nx//2-5] = sinusoidal(t, 0.01, 1500e6)
+    dz[nx//2-5,ny//2-5] = sinusoidal(t, 0.01, 1500e6)
 
 
 def efield(nx: int, ny: int, naz: np.ndarray, dz: np.ndarray, ez: np.ndarray) -> None:
     """ calculate the Ez field from Dz """
-    ez[0:ny,0:nx] = naz[0:ny,0:nx] * dz[0:ny,0:nx]
+    ez[0:nx,0:ny] = naz[0:nx,0:ny] * dz[0:nx,0:ny]
 
 
 def hfield(nx: int, ny: int, pml: pmlayer, ez: np.ndarray, ihx: np.ndarray, ihy: np.ndarray, hx: np.ndarray, hy: np.ndarray) -> None:
     """ calculate the Hx and Hy field """
-    curl_em = ez[0:ny-1,0:nx-1] - ez[0:ny-1,1:nx]
-    curl_en = ez[0:ny-1,0:nx-1] - ez[1:ny,0:nx-1]
-    ihx[0:ny-1,0:nx-1] = ihx[0:ny-1,0:nx-1] + curl_em
-    ihy[0:ny-1,0:nx-1] = ihy[0:ny-1,0:nx-1] + curl_en
-    hx[0:ny-1,0:nx-1] = pml.fx3[0:nx-1] * hx[0:ny-1,0:nx-1] + pml.fx2[0:nx-1] * (0.5 * curl_em + pml.fy1[0:ny-1,None] * ihx[0:ny-1,0:nx-1])
-    hy[0:ny-1,0:nx-1] = pml.fy3[0:ny-1,None] * hy[0:ny-1,0:nx-1] - pml.fy2[0:ny-1,None] * (0.5 * curl_en + pml.fx1[0:nx-1] * ihy[0:ny-1,0:nx-1])
+    curl_em = ez[0:nx-1,0:ny-1] - ez[0:nx-1,1:ny]
+    curl_en = ez[0:nx-1,0:ny-1] - ez[1:nx,0:ny-1]
+    ihx[0:nx-1,0:ny-1] += curl_em
+    ihy[0:nx-1,0:ny-1] += curl_en
+    hx[0:nx-1,0:ny-1] = pml.fy3[0:ny-1] * hx[0:nx-1,0:ny-1] + pml.fy2[0:ny-1] * (0.5 * curl_em + pml.fx1[0:nx-1,None] * ihx[0:nx-1,0:ny-1])
+    hy[0:nx-1,0:ny-1] = pml.fx3[0:nx-1,None] * hy[0:nx-1,0:ny-1] - pml.fx2[0:nx-1,None] * (0.5 * curl_en + pml.fy1[0:ny-1] * ihy[0:nx-1,0:ny-1])
 
 
 def main():
@@ -101,15 +100,15 @@ def main():
 
     ns: int = 100  # number of time steps
 
-    dz = np.zeros((ny, nx), dtype=np.float64)
-    ez = np.zeros((ny, nx), dtype=np.float64)
-    hx = np.zeros((ny, nx), dtype=np.float64)
-    hy = np.zeros((ny, nx), dtype=np.float64)
+    dz = np.zeros((nx, ny), dtype=np.float64)
+    ez = np.zeros((nx, ny), dtype=np.float64)
+    hx = np.zeros((nx, ny), dtype=np.float64)
+    hy = np.zeros((nx, ny), dtype=np.float64)
 
-    ihx = np.zeros((ny, nx), dtype=np.float64)
-    ihy = np.zeros((ny, nx), dtype=np.float64)
+    ihx = np.zeros((nx, ny), dtype=np.float64)
+    ihy = np.zeros((nx, ny), dtype=np.float64)
 
-    naz = np.ones((ny, nx), dtype=np.float64)
+    naz = np.ones((nx, ny), dtype=np.float64)
 
     ds: float = 0.01  # spatial step (m)
     dt: float = ds/6e8  # time step (s)
