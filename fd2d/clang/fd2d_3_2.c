@@ -46,23 +46,23 @@ void pmlparam(int npml, int nx, int ny, pmlayer *pml) {
 
 void dfield(int t, int nx, int ny, pmlayer *pml, double *dz, double *hx, double *hy) {
     /* calculate the electric flux density Dz */
-    for (int j = 1; j < ny; j++) {
-        for (int i = 1; i < nx; i++) {
-            int n = j*nx+i;
-            dz[n] = pml->gy3[j] * pml->gx3[i] * dz[n] + pml->gy2[j] * pml->gx2[i] * 0.5 * (hy[n] - hy[n-nx] - hx[n] + hx[n-1]);
+    for (int i = 1; i < nx; i++) {
+        for (int j = 1; j < ny; j++) {
+            int n = i*ny+j;
+            dz[n] = pml->gx3[i] * pml->gy3[j] * dz[n] + pml->gx2[i] * pml->gy2[j] * 0.5 * (hy[n] - hy[n-ny] - hx[n] + hx[n-1]);
         }
     }
     /* put a sinusoidal source at a point that is offset five cells
      * from the center of the problem space in each direction */
-    dz[(ny/2-5)*nx+(nx/2-5)] = sinusoidal(t, 0.01, 1500e6);
+    dz[(nx/2-5)*ny+(ny/2-5)] = sinusoidal(t, 0.01, 1500e6);
 }
 
 
 void efield(int nx, int ny, double *naz, double *dz, double *ez) {
     /* calculate the Ez field from Dz */
-    for (int j = 0; j < ny; j++) {
-        for (int i = 0; i < nx; i++) {
-            int n = j*nx+i;
+    for (int i = 0; i < nx; i++) {
+        for (int j = 0; j < ny; j++) {
+            int n = i*ny+j;
             ez[n] = naz[n] * dz[n];
         }
     }
@@ -71,15 +71,15 @@ void efield(int nx, int ny, double *naz, double *dz, double *ez) {
 
 void hfield(int nx, int ny, pmlayer *pml, double *ez, double *ihx, double *ihy, double *hx, double *hy) {
     /* calculate the Hx and Hy field */
-    for (int j = 0; j < ny - 1; j++) {
-        for (int i = 0; i < nx - 1; i++) {
-            int n = j*nx+i;
+    for (int i = 0; i < nx - 1; i++) {
+        for (int j = 0; j < ny - 1; j++) {
+            int n = i*ny+j;
             double curl_em = ez[n] - ez[n+1];
-            double curl_en = ez[n] - ez[n+nx];
+            double curl_en = ez[n] - ez[n+ny];
             ihx[n] += curl_em;
             ihy[n] += curl_en;
-            hx[n] = pml->fx3[i] * hx[n] + pml->fx2[i] * (0.5 * curl_em + pml->fy1[j] * ihx[n]);
-            hy[n] = pml->fy3[j] * hy[n] - pml->fy2[j] * (0.5 * curl_en + pml->fx1[i] * ihy[n]);
+            hx[n] = pml->fy3[j] * hx[n] + pml->fy2[j] * (0.5 * curl_em + pml->fx1[i] * ihx[n]);
+            hy[n] = pml->fx3[i] * hy[n] - pml->fx2[i] * (0.5 * curl_en + pml->fy1[j] * ihy[n]);
         }
     }
 }
