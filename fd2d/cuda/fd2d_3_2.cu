@@ -55,25 +55,26 @@ void pmlparam(int npml, int nx, int ny, pmlayer *pml) {
 __global__
 void dfield(int t, int nx, int ny, pmlayer *pml, float *dz, float *hx, float *hy) {
     /* calculate the electric flux density Dz */
-    for (int j = idy + 1; j < ny; j += sty) {
-        for (int i = idx + 1; i < nx; i += stx) {
-            int n = j*nx+i;
-            dz[n] = pml->gy3[j] * pml->gx3[i] * dz[n] + pml->gy2[j] * pml->gx2[i] * 0.5 * (hy[n] - hy[n-nx] - hx[n] + hx[n-1]);
+    for (int i = idy + 1; i < nx; i += sty) {
+        for (int j = idx + 1; j < ny; j += stx) {
+            int n = i*ny+j;
+            dz[n] = pml->gx3[i] * pml->gy3[j] * dz[n] + pml->gx2[i] * pml->gy2[j] * 0.5 * (hy[n] - hy[n-ny] - hx[n] + hx[n-1]);
         }
     }
+    __syncthreads();
     /* put a sinusoidal source at a point that is offset five cells
      * from the center of the problem space in each direction */
-    if ((idy == ny/2-5) && (idx == nx/2-5))
-        dz[(ny/2-5)*nx+(nx/2-5)] = sinusoidal(t, 0.01, 1500e6);
+    if (idy == nx/2-5 && idx == ny/2-5)
+        dz[(nx/2-5)*ny+(ny/2-5)] = sinusoidal(t, 0.01, 1500e6);
 }
 
 
 __global__
 void efield(int nx, int ny, float *naz, float *dz, float *ez) {
     /* calculate the Ez field from Dz */
-    for (int j = idy; j < ny; j += sty) {
-        for (int i = idx; i < nx; i += stx) {
-            int n = j*nx+i;
+    for (int i = idy; i < nx; i += sty) {
+        for (int j = idx; j < ny; j += stx) {
+            int n = i*ny+j;
             ez[n] = naz[n] * dz[n];
         }
     }
@@ -83,15 +84,15 @@ void efield(int nx, int ny, float *naz, float *dz, float *ez) {
 __global__
 void hfield(int nx, int ny, pmlayer *pml, float *ez, float *ihx, float *ihy, float *hx, float *hy) {
     /* calculate the Hx and Hy field */
-    for (int j = idy; j < ny - 1; j += sty) {
-        for (int i = idx; i < nx - 1; i += stx) {
-            int n = j*nx+i;
+    for (int i = idy; i < nx - 1; i += sty) {
+        for (int j = idx; j < ny - 1; j += stx) {
+            int n = i*ny+j;
             float curl_em = ez[n] - ez[n+1];
-            float curl_en = ez[n] - ez[n+nx];
+            float curl_en = ez[n] - ez[n+ny];
             ihx[n] += curl_em;
             ihy[n] += curl_en;
-            hx[n] = pml->fx3[i] * hx[n] + pml->fx2[i] * (0.5 * curl_em + pml->fy1[j] * ihx[n]);
-            hy[n] = pml->fy3[j] * hy[n] - pml->fy2[j] * (0.5 * curl_en + pml->fx1[i] * ihy[n]);
+            hx[n] = pml->fy3[j] * hx[n] + pml->fy2[j] * (0.5 * curl_em + pml->fx1[i] * ihx[n]);
+            hy[n] = pml->fx3[i] * hy[n] - pml->fx2[i] * (0.5 * curl_en + pml->fy1[j] * ihy[n]);
         }
     }
 }
@@ -132,7 +133,7 @@ int main() {
 
     float *naz;
     cudaMallocManaged(&naz, nx*ny*sizeof(*naz));
-    for (int i = 0; i < nx*ny; naz[i] = 1.0f; i++);
+    for (int i = 0; i < nx*ny; naz[i] = 1.0f, i++);
 
     float ds = 0.01;  /* spatial step (m) */
     float dt = ds/6e8;  /* time step (s) */
@@ -168,8 +169,8 @@ int main() {
     dim3 gridDim, blockDim;
     blockDim.x = 16;
     blockDim.y = 16;
-    gridDim.x = (nx + blockDim.x - 1)/blockDim.x;
-    gridDim.y = (ny + blockDim.y - 1)/blockDim.y;
+    gridDim.x = (ny + blockDim.x - 1)/blockDim.x;
+    gridDim.y = (nx + blockDim.y - 1)/blockDim.y;
 
     int npml = 8;  /* pml thickness */
     pmlparam<<<gridDim, blockDim>>>(npml, nx, ny, &pml);
