@@ -8,32 +8,43 @@
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d
+import numba as nb
 import numpy as np
 
 plt.style.use("classic")
 plt.style.use("../pyplot.mplstyle")
 
 
+@nb.jit(nopython=True, fastmath=True)
 def gaussian(t: int, t0: int, sigma: float) -> float:
     return np.exp(-0.5 * ((t - t0)/sigma)**2)
 
 
+@nb.jit(nopython=True, parallel=True, fastmath=True)
 def dfield(t: int, nx: int, ny: int, dz: np.ndarray, hx: np.ndarray, hy: np.ndarray) -> None:
     """ calculate the electric flux density Dz """
-    dz[1:nx,1:ny] += 0.5 * (hy[1:nx,1:ny] - hy[0:nx-1,1:ny] - hx[1:nx,1:ny] + hx[1:nx,0:ny-1])
+    for i in nb.prange(1, nx):
+        for j in nb.prange(1, ny):
+            dz[i,j] += 0.5 * (hy[i,j] - hy[i-1,j] - hx[i,j] + hx[i,j-1])
     # put a Gaussian pulse in the middle
     dz[nx//2,ny//2] = gaussian(t, 20, 6)
 
 
+@nb.jit(nopython=True, parallel=True, fastmath=True)
 def efield(nx: int, ny: int, naz: np.ndarray, dz: np.ndarray, ez: np.ndarray) -> None:
     """ calculate the Ez field from Dz """
-    ez[0:nx,0:ny] = naz[0:nx,0:ny] * dz[0:nx,0:ny]
+    for i in nb.prange(0, nx):
+        for j in nb.prange(0, ny):
+            ez[i,j] = naz[i,j] * dz[i,j]
 
 
+@nb.jit(nopython=True, parallel=True, fastmath=True)
 def hfield(nx: int, ny: int, ez: np.ndarray, hx: np.ndarray, hy: np.ndarray) -> None:
     """ calculate the Hx and Hy field """
-    hx[0:nx-1,0:ny-1] += 0.5 * (ez[0:nx-1,0:ny-1] - ez[0:nx-1,1:ny])
-    hy[0:nx-1,0:ny-1] -= 0.5 * (ez[0:nx-1,0:ny-1] - ez[1:nx,0:ny-1])
+    for i in nb.prange(0, nx - 1):
+        for j in nb.prange(0, ny - 1):
+            hx[i,j] += 0.5 * (ez[i,j] - ez[i,j+1])
+            hy[i,j] -= 0.5 * (ez[i,j] - ez[i+1,j])
 
 
 def main():
