@@ -6,6 +6,7 @@
 """ Simulation of a pulse in free space in the transverse magnetic (TM) mode """
 
 import PyPlot as plt
+using Base.Threads
 
 plt.matplotlib.style.use("classic")
 plt.matplotlib.style.use("../pyplot.mplstyle")
@@ -45,7 +46,11 @@ end
 
 function dfield(t::Int32, nx::Int, ny::Int, dz::Array{Float64}, hx::Array{Float64}, hy::Array{Float64})
     """ calculate the electric flux density Dz """
-    @views dz[2:nx,2:ny] .+= 0.5 .* (hy[2:nx,2:ny] .- hy[1:nx-1,2:ny] .- hx[2:nx,2:ny] .+ hx[2:nx,1:ny-1])
+    @threads for j in 2:ny
+        @inbounds for i in 2:nx
+            dz[i,j] += 0.5 * (hy[i,j] - hy[i-1,j] - hx[i,j] + hx[i,j-1])
+        end
+    end
     # put a Gaussian pulse in the middle
     dz[div(nx,2)+1,div(ny,2)+1] = gaussian(t, 20, 6.0)
 end
@@ -53,14 +58,22 @@ end
 
 function efield(nx::Int, ny::Int, naz::Array{Float64}, dz::Array{Float64}, ez::Array{Float64})
     """ calculate the Ez field from Dz """
-    @views ez[1:nx,1:ny] .= naz[1:nx,1:ny] .* dz[1:nx,1:ny]
+    @threads for j in 1:ny
+        @inbounds for i in 1:nx
+            ez[i,j] = naz[i,j] * dz[i,j]
+        end
+    end
 end
 
 
 function hfield(nx::Int, ny::Int, ez::Array{Float64}, hx::Array{Float64}, hy::Array{Float64})
     """ calculate the Hx and Hy field """
-    @views hx[1:nx-1,1:ny-1] .+= 0.5 .* (ez[1:nx-1,1:ny-1] .- ez[1:nx-1,2:ny])
-    @views hy[1:nx-1,1:ny-1] .-= 0.5 .* (ez[1:nx-1,1:ny-1] .- ez[2:nx,1:ny-1])
+    @threads for j in 1:ny-1
+        @inbounds for i in 1:nx-1
+            hx[i,j] += 0.5 * (ez[i,j] - ez[i,j+1])
+            hy[i,j] -= 0.5 * (ez[i,j] - ez[i+1,j])
+        end
+    end
 end
 
 
