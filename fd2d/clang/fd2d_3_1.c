@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <omp.h>
 
 
 double gaussian(int t, int t0, double sigma) {
@@ -16,6 +17,7 @@ double gaussian(int t, int t0, double sigma) {
 
 void dfield(int t, int nx, int ny, double *dz, double *hx, double *hy) {
     /* calculate the electric flux density Dz */
+    #pragma omp parallel for collapse(2)
     for (int i = 1; i < nx; i++) {
         for (int j = 1; j < ny; j++) {
             int n = i*ny+j;
@@ -29,6 +31,7 @@ void dfield(int t, int nx, int ny, double *dz, double *hx, double *hy) {
 
 void efield(int nx, int ny, double *naz, double *dz, double *ez) {
     /* calculate the Ez field from Dz */
+    #pragma omp parallel for collapse(2)
     for (int i = 0; i < nx; i++) {
         for (int j = 0; j < ny; j++) {
             int n = i*ny+j;
@@ -40,6 +43,7 @@ void efield(int nx, int ny, double *naz, double *dz, double *ez) {
 
 void hfield(int nx, int ny, double *ez, double *hx, double *hy) {
     /* calculate the Hx and Hy field */
+    #pragma omp parallel for collapse(2)
     for (int i = 0; i < nx - 1; i++) {
         for (int j = 0; j < ny - 1; j++) {
             int n = i*ny+j;
