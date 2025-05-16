@@ -10,6 +10,7 @@ import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d
 from collections import namedtuple
+import numba as nb
 import numpy as np
 
 plt.style.use("classic")
@@ -30,6 +31,7 @@ pmlayer = namedtuple('pmlayer', (
 ))
 
 
+@nb.jit(nopython=True, fastmath=True)
 def sinusoidal(t: int, ds: float, freq: float) -> float:
     dt: float = ds/6e8  # time step (s)
     return np.sin(2 * np.pi * freq * dt * t)
@@ -47,27 +49,34 @@ def pmlparam(npml: int, nx: int, ny: int, pml: pmlayer) -> None:
         pml.gx3[n] = pml.gx3[nx-1-n] = pml.gy3[n] = pml.gy3[ny-1-n] = (1-xm)/(1+xm)
 
 
+@nb.jit(nopython=True, parallel=True, fastmath=True)
 def dfield(t: int, nx: int, ny: int, pml: pmlayer, dz: np.ndarray, hx: np.ndarray, hy: np.ndarray) -> None:
     """ calculate the electric flux density Dz """
-    dz[1:nx,1:ny] = pml.gx3[1:nx,None] * pml.gy3[1:ny] * dz[1:nx,1:ny] + pml.gx2[1:nx,None] * pml.gy2[1:ny] * 0.5 * (hy[1:nx,1:ny] - hy[0:nx-1,1:ny] - hx[1:nx,1:ny] + hx[1:nx,0:ny-1])
+    for i in nb.prange(1, nx):
+        for j in nb.prange(1, ny):
+            dz[i,j] = pml.gx3[i] * pml.gy3[j] * dz[i,j] + pml.gx2[i] * pml.gy2[j] * 0.5 * (hy[i,j] - hy[i-1,j] - hx[i,j] + hx[i,j-1])
     # put a sinusoidal source at a point that is offset five cells
     # from the center of the problem space in each direction
     dz[nx//2-5,ny//2-5] = sinusoidal(t, 0.01, 1500e6)
 
 
+@nb.jit(nopython=True, parallel=True, fastmath=True)
 def efield(nx: int, ny: int, naz: np.ndarray, dz: np.ndarray, ez: np.ndarray) -> None:
     """ calculate the Ez field from Dz """
-    ez[0:nx,0:ny] = naz[0:nx,0:ny] * dz[0:nx,0:ny]
+    for i in nb.prange(0, nx):
+        for j in nb.prange(0, ny):
+            ez[i,j] = naz[i,j] * dz[i,j]
 
 
+@nb.jit(nopython=True, parallel=True, fastmath=True)
 def hfield(nx: int, ny: int, pml: pmlayer, ez: np.ndarray, ihx: np.ndarray, ihy: np.ndarray, hx: np.ndarray, hy: np.ndarray) -> None:
     """ calculate the Hx and Hy field """
-    curl_em = ez[0:nx-1,0:ny-1] - ez[0:nx-1,1:ny]
-    curl_en = ez[0:nx-1,0:ny-1] - ez[1:nx,0:ny-1]
-    ihx[0:nx-1,0:ny-1] += curl_em
-    ihy[0:nx-1,0:ny-1] += curl_en
-    hx[0:nx-1,0:ny-1] = pml.fy3[0:ny-1] * hx[0:nx-1,0:ny-1] + pml.fy2[0:ny-1] * (0.5 * curl_em + pml.fx1[0:nx-1,None] * ihx[0:nx-1,0:ny-1])
-    hy[0:nx-1,0:ny-1] = pml.fx3[0:nx-1,None] * hy[0:nx-1,0:ny-1] - pml.fx2[0:nx-1,None] * (0.5 * curl_en + pml.fy1[0:ny-1] * ihy[0:nx-1,0:ny-1])
+    for i in nb.prange(0, nx - 1):
+        for j in nb.prange(0, ny - 1):
+            ihx[i,j] += ez[i,j] - ez[i,j+1]
+            ihy[i,j] += ez[i,j] - ez[i+1,j]
+            hx[i,j] = pml.fy3[j] * hx[i,j] + pml.fy2[j] * (0.5 * ez[i,j] - 0.5 * ez[i,j+1] + pml.fx1[i] * ihx[i,j])
+            hy[i,j] = pml.fx3[i] * hy[i,j] - pml.fx2[i] * (0.5 * ez[i,j] - 0.5 * ez[i+1,j] + pml.fy1[j] * ihy[i,j])
 
 
 def main():
