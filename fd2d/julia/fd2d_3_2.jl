@@ -7,6 +7,8 @@
 magnetic (TM) mode with the two-dimensional perfectly matched layer (PML) """
 
 import PyPlot as plt
+using Base.Threads
+using LoopVectorization
 
 plt.matplotlib.style.use("classic")
 plt.matplotlib.style.use("../pyplot.mplstyle")
@@ -61,7 +63,7 @@ end
 
 function pmlparam(npml::Int, nx::Int, ny::Int, pml::pmlayer)
     """ calculate the two-dimensional perfectly matched layer (PML) parameters """
-    for n in (1:npml)
+    for n in 1:npml
         xm = 0.33 * ((npml-n+1)/npml)^3
         xn = 0.33 * ((npml-n+1-0.5)/npml)^3
         pml.fx1[n] = pml.fx1[nx-n] = pml.fy1[n] = pml.fy1[ny-n] = xn
@@ -75,7 +77,11 @@ end
 
 function dfield(t::Int32, nx::Int, ny::Int, pml::pmlayer, dz::Array{Float64}, hx::Array{Float64}, hy::Array{Float64})
     """ calculate the electric flux density Dz """
-    @views dz[2:nx,2:ny] .= pml.gx3[2:nx] .* pml.gy3[2:ny]' .* dz[2:nx,2:ny] .+ pml.gx2[2:nx] .* pml.gy2[2:ny]' .* 0.5 .* (hy[2:nx,2:ny] .- hy[1:nx-1,2:ny] .- hx[2:nx,2:ny] .+ hx[2:nx,1:ny-1])
+    @threads for j in 2:ny
+        @turbo for i in 2:nx
+            dz[i,j] = pml.gx3[i] * pml.gy3[j] * dz[i,j] + pml.gx2[i] * pml.gy2[j] * 0.5 * (hy[i,j] - hy[i-1,j] - hx[i,j] + hx[i,j-1])
+        end
+    end
     # put a sinusoidal source at a point that is offset four cells
     # from the center of the problem space in each direction
     dz[div(nx,2)-4,div(ny,2)-4] = sinusoidal(t, 0.01, 1500e6)
@@ -84,18 +90,24 @@ end
 
 function efield(nx::Int, ny::Int, naz::Array{Float64}, dz::Array{Float64}, ez::Array{Float64})
     """ calculate the Ez field from Dz """
-    @views ez[1:nx,1:ny] .= naz[1:nx,1:ny] .* dz[1:nx,1:ny]
+    @threads for j in 1:ny
+        @turbo for i in 1:nx
+            ez[i,j] = naz[i,j] * dz[i,j]
+        end
+    end
 end
 
 
 function hfield(nx::Int, ny::Int, pml::pmlayer, ez::Array{Float64}, ihx::Array{Float64}, ihy::Array{Float64}, hx::Array{Float64}, hy::Array{Float64})
     """ calculate the Hx and Hy field """
-    curl_em = ez[1:nx-1,1:ny-1] .- ez[1:nx-1,2:ny]
-    curl_en = ez[1:nx-1,1:ny-1] .- ez[2:nx,1:ny-1]
-    @views ihx[1:nx-1,1:ny-1] .+= curl_em
-    @views ihy[1:nx-1,1:ny-1] .+= curl_en
-    @views hx[1:nx-1,1:ny-1] .= pml.fy3[1:ny-1]' .* hx[1:nx-1,1:ny-1] .+ pml.fy2[1:ny-1]' .* (0.5 .* curl_em .+ pml.fx1[1:nx-1] .* ihx[1:nx-1,1:ny-1])
-    @views hy[1:nx-1,1:ny-1] .= pml.fx3[1:nx-1] .* hy[1:nx-1,1:ny-1] .- pml.fx2[1:nx-1] .* (0.5 .* curl_en .+ pml.fy1[1:ny-1]' .* ihy[1:nx-1,1:ny-1])
+    @threads for j in 1:ny-1
+        @turbo for i in 1:nx-1
+            ihx[i,j] += ez[i,j] - ez[i,j+1]
+            ihy[i,j] += ez[i,j] - ez[i+1,j]
+            hx[i,j] = pml.fy3[j] * hx[i,j] + pml.fy2[j] * (0.5 * ez[i,j] - 0.5 * ez[i,j+1] + pml.fx1[i] * ihx[i,j])
+            hy[i,j] = pml.fx3[i] * hy[i,j] - pml.fx2[i] * (0.5 * ez[i,j] - 0.5 * ez[i+1,j] + pml.fy1[j] * ihy[i,j])
+        end
+    end
 end
 
 
