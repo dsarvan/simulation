@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <omp.h>
 
 
 typedef struct {
@@ -46,6 +47,7 @@ void pmlparam(int npml, int nx, int ny, pmlayer *pml) {
 
 void dfield(int t, int nx, int ny, pmlayer *pml, double *dz, double *hx, double *hy) {
     /* calculate the electric flux density Dz */
+    #pragma omp parallel for collapse(2)
     for (int i = 1; i < nx; i++) {
         for (int j = 1; j < ny; j++) {
             int n = i*ny+j;
@@ -60,6 +62,7 @@ void dfield(int t, int nx, int ny, pmlayer *pml, double *dz, double *hx, double 
 
 void efield(int nx, int ny, double *naz, double *dz, double *ez) {
     /* calculate the Ez field from Dz */
+    #pragma omp parallel for collapse(2)
     for (int i = 0; i < nx; i++) {
         for (int j = 0; j < ny; j++) {
             int n = i*ny+j;
@@ -71,15 +74,14 @@ void efield(int nx, int ny, double *naz, double *dz, double *ez) {
 
 void hfield(int nx, int ny, pmlayer *pml, double *ez, double *ihx, double *ihy, double *hx, double *hy) {
     /* calculate the Hx and Hy field */
+    #pragma omp parallel for collapse(2)
     for (int i = 0; i < nx - 1; i++) {
         for (int j = 0; j < ny - 1; j++) {
             int n = i*ny+j;
-            double curl_em = ez[n] - ez[n+1];
-            double curl_en = ez[n] - ez[n+ny];
-            ihx[n] += curl_em;
-            ihy[n] += curl_en;
-            hx[n] = pml->fy3[j] * hx[n] + pml->fy2[j] * (0.5 * curl_em + pml->fx1[i] * ihx[n]);
-            hy[n] = pml->fx3[i] * hy[n] - pml->fx2[i] * (0.5 * curl_en + pml->fy1[j] * ihy[n]);
+            ihx[n] += ez[n] - ez[n+1];
+            ihy[n] += ez[n] - ez[n+ny];
+            hx[n] = pml->fy3[j] * hx[n] + pml->fy2[j] * (0.5 * ez[n] - 0.5 * ez[n+1] + pml->fx1[i] * ihx[n]);
+            hy[n] = pml->fx3[i] * hy[n] - pml->fx2[i] * (0.5 * ez[n] - 0.5 * ez[n+ny] + pml->fy1[j] * ihy[n]);
         }
     }
 }
