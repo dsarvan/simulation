@@ -136,12 +136,10 @@ void hfield(int nx, int ny, pmlayer *pml, float *ez, float *ihx, float *ihy, flo
     for (int i = idy; i < nx - 1; i += sty) {
         for (int j = idx; j < ny - 1; j += stx) {
             int n = i*ny+j;
-            float curl_em = ez[n] - ez[n+1];
-            float curl_en = ez[n] - ez[n+ny];
-            ihx[n] += curl_em;
-            ihy[n] += curl_en;
-            hx[n] = pml->fy3[j] * hx[n] + pml->fy2[j] * (0.5 * curl_em + pml->fx1[i] * ihx[n]);
-            hy[n] = pml->fx3[i] * hy[n] - pml->fx2[i] * (0.5 * curl_en + pml->fy1[j] * ihy[n]);
+            ihx[n] += ez[n] - ez[n+1];
+            ihy[n] += ez[n] - ez[n+ny];
+            hx[n] = pml->fy3[j] * hx[n] + pml->fy2[j] * (0.5 * ez[n] - 0.5 * ez[n+1] + pml->fx1[i] * ihx[n]);
+            hy[n] = pml->fx3[i] * hy[n] - pml->fx2[i] * (0.5 * ez[n] - 0.5 * ez[n+ny] + pml->fy1[j] * ihy[n]);
         }
     }
 }
