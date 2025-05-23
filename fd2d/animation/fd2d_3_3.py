@@ -187,8 +187,7 @@ def main():
     ax.text2D(0.1, 0.7, "", transform=ax.transAxes)
     ax.set(xlim=(0, nx), ylim=(0, ny), zlim=(0, 1))
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$", zlabel=r"$E_z\;(V/m)$")
-    ax.zaxis.set_rotate_label(False)
-    ax.view_init(elev=20.0, azim=45)
+    ax.zaxis.set_rotate_label(False); ax.view_init(elev=20.0, azim=45)
     plt.subplots_adjust(bottom=0.1, hspace=0.45)
 
     with writer.saving(fig, "fd2d_surface_3_3.mp4", 300):
