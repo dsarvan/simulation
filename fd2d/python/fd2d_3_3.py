@@ -192,7 +192,6 @@ def main():
         incthx(nx, ny, npml, ezi, hx)
         incthy(nx, ny, npml, ezi, hy)
 
-    print(ez[2][0:50])
     surfaceplot(ns, nx, ny, ez)
     contourplot(ns, nx, ny, ez)
 
