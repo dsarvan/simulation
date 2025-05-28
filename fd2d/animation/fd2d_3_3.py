@@ -142,7 +142,6 @@ def main():
 
     ds: float = 0.01  # spatial step (m)
     dt: float = ds/6e8  # time step (s)
-    eps0: float = 8.854e-12  # vacuum permittivity (F/m)
 
     pml = pmlayer(
         fx1 = np.zeros(nx, dtype=np.float64),
