@@ -43,11 +43,11 @@ def main():
     with writer.saving(fig, "fd1d_1_1.mp4", 300):
         for t in np.arange(1, ns+1).astype(np.int32):
             # calculate the Ex field
-            ex[1:nx] = ex[1:nx] + 0.5 * (hy[0:nx-1] - hy[1:nx])
+            ex[1:nx] += 0.5 * (hy[0:nx-1] - hy[1:nx])
             # put a Gaussian pulse in the middle
             ex[nx//2] = gaussian(t, 40, 12)
             # calculate the Hy field
-            hy[0:nx-1] = hy[0:nx-1] + 0.5 * (ex[0:nx-1] - ex[1:nx])
+            hy[0:nx-1] += 0.5 * (ex[0:nx-1] - ex[1:nx])
 
             axline.set_ydata(ex)
             axtime.set_text(rf"$T$ = {t}")
