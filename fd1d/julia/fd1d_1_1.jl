@@ -12,7 +12,7 @@ plt.matplotlib.style.use("../pyplot.mplstyle")
 
 
 function visualize(ns::Int, nx::Int, ex::Array{Float64})::Nothing
-    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw=Dict("hspace" => 0.2))
+    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw=Dict("hspace"=>0.2))
     fig.suptitle(raw"FDTD simulation of a pulse in free space")
     ax.plot(ex, color="black", linewidth=1)
     ax.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
