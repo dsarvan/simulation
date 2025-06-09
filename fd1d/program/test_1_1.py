@@ -14,7 +14,7 @@ plt.style.use("../pyplot.mplstyle")
 
 
 def visualize(ns: int, nx: int, ex: np.ndarray) -> None:
-    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace": 0.2})
+    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
     fig.suptitle(r"FDTD simulation of a pulse in free space")
     ax.plot(ex, color="black", linewidth=1)
     ax.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
@@ -26,7 +26,7 @@ def visualize(ns: int, nx: int, ex: np.ndarray) -> None:
 
 
 def gaussian(t: int, t0: int, sigma: float) -> float:
-    return np.exp(-0.5 * ((t - t0)/sigma)**2)
+    return np.exp(-0.5*((t-t0)/sigma)**2)
 
 
 def main():
