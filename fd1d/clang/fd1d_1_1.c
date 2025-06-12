@@ -10,7 +10,7 @@
 
 
 double gaussian(int t, int t0, double sigma) {
-    return exp(-0.5 * ((t - t0)/sigma)*((t - t0)/sigma));
+    return exp(-0.5*((t-t0)/sigma)*((t-t0)/sigma));
 }
 
 
