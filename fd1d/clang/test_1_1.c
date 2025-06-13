@@ -11,7 +11,7 @@
 
 
 float gaussian(int t, int t0, float sigma) {
-    return exp(-0.5 * ((t - t0)/sigma)*((t - t0)/sigma));
+    return exp(-0.5*((t-t0)/sigma)*((t-t0)/sigma));
 }
 
 
@@ -47,7 +47,7 @@ int main() {
     }
 
     clock_t ntime = clock();
-    float time = (ntime-stime)*1000/CLOCKS_PER_SEC;
+    float time = (ntime - stime)*1000/CLOCKS_PER_SEC;
     printf("Total compute time on CPU: %.3f s\n", time/1000.0f);
 
     for (int i = 0; i < 50; i++)
