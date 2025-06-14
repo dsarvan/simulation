@@ -26,7 +26,7 @@ end
 
 
 function gaussian(t::Int32, t0::Int, sigma::Float32)::Float32
-    return exp(-0.5 * ((t - t0)/sigma)^2)
+    return exp(-0.5*((t-t0)/sigma)^2)
 end
 
 
