@@ -1,5 +1,5 @@
 #!/usr/bin/env julia
-# File: fd1d_1_1.jl
+# File: test_1_1.jl
 # Name: D.Saravanan
 # Date: 23/02/2025
 
