@@ -1,4 +1,4 @@
-/* File: fd1d_1_1.cu
+/* File: test_1_1.cu
  * Name: D.Saravanan
  * Date: 11/10/2021
  * Simulation of a pulse in free space
