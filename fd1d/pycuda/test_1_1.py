@@ -30,8 +30,8 @@ def visualize(ns: int, nx: int, ex: np.ndarray) -> None:
 
 
 kernel = """
-#define idx (blockIdx.x*blockDim.x+threadIdx.x)
-#define stx (blockDim.x*gridDim.x)
+#define idx blockIdx.x*blockDim.x+threadIdx.x
+#define stx blockDim.x*gridDim.x
 
 
 __device__
