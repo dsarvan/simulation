@@ -25,7 +25,7 @@ def visualize(ns: int, nx: int, ex: np.ndarray) -> None:
 
 
 def gaussian(t: int, t0: int, sigma: float) -> float:
-    return np.exp(-0.5*((t-t0)/sigma)**2)
+    return np.exp(-0.5*((t - t0)/sigma)**2)
 
 
 def main():
@@ -40,7 +40,7 @@ def main():
         # calculate the Ex field
         ex[1:nx] += 0.5 * (hy[0:nx-1] - hy[1:nx])
         # put a Gaussian pulse in the middle
-        ex[nx//2] = gaussian(t, 40, 12)
+        ex[nx//2] = gaussian(t, 40, 12.0)
         # calculate the Hy field
         hy[0:nx-1] += 0.5 * (ex[0:nx-1] - ex[1:nx])
 
