@@ -26,7 +26,7 @@ end
 
 
 function gaussian(t::Int32, t0::Int, sigma::Float32)::Float32
-    return exp(-0.5*((t-t0)/sigma)^2)
+    return exp(-0.5*((t - t0)/sigma)^2)
 end
 
 
@@ -44,7 +44,7 @@ function main()
         # calculate the Ex field
         @views ex[2:nx] .+= 0.5 .* (hy[1:nx-1] .- hy[2:nx])
         # put a Gaussian pulse in the middle
-        ex[div(nx,2)+1] = gaussian(t, 40, 12.0f0)
+        ex[div(nx,2)+1] = gaussian(t, 40, 12.f0)
         # calculate the Hy field
         @views hy[1:nx-1] .+= 0.5 .* (ex[1:nx-1] .- ex[2:nx])
     end
