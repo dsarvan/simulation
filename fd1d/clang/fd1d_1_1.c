@@ -10,7 +10,7 @@
 
 
 double gaussian(int t, int t0, double sigma) {
-    return exp(-0.5*((t-t0)/sigma)*((t-t0)/sigma));
+    return exp(-0.5*(t - t0)/sigma*(t - t0)/sigma);
 }
 
 
@@ -19,7 +19,7 @@ void exfield(int t, int nx, double *ex, double *hy) {
     for (int i = 1; i < nx; i++)
         ex[i] += 0.5 * (hy[i-1] - hy[i]);
     /* put a Gaussian pulse in the middle */
-    ex[nx/2] = gaussian(t, 40, 12);
+    ex[nx/2] = gaussian(t, 40, 12.0);
 }
 
 
