@@ -15,7 +15,7 @@
 
 __device__
 float gaussian(int t, int t0, float sigma) {
-    return exp(-0.5*((t-t0)/sigma)*((t-t0)/sigma));
+    return exp(-0.5*(t - t0)/sigma*(t - t0)/sigma);
 }
 
 
@@ -25,7 +25,7 @@ void exfield(int t, int nx, float *ex, float *hy) {
     for (int i = idx+1; i < nx; i += stx)
         ex[i] += 0.5 * (hy[i-1] - hy[i]);
     /* put a Gaussian pulse in the middle */
-    if (idx == nx/2) ex[nx/2] = gaussian(t, 40, 12);
+    if (idx == nx/2) ex[nx/2] = gaussian(t, 40, 12.0f);
 }
 
 
@@ -78,13 +78,13 @@ int main() {
 
     float time;
     cudaEventElapsedTime(&time, stime, ntime);
-    printf("Total compute time on GPU: %f s\n", time/1000.0f);
-
-    for (int i = 0; i < 50; i++)
-        printf("%e\n", ex[i]);
+    printf("Total compute time on GPU: %.3f s\n", time/1000.0f);
 
     cudaEventDestroy(stime);
     cudaEventDestroy(ntime);
+
+    for (int i = 0; i < 50; i++)
+        printf("%e\n", ex[i]);
 
     cudaFree(ex);
     cudaFree(hy);
