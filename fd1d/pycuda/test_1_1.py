@@ -36,7 +36,7 @@ kernel = """
 
 __device__
 float gaussian(int t, int t0, float sigma) {
-    return exp(-0.5*((t-t0)/sigma)*((t-t0)/sigma));
+    return exp(-0.5*(t - t0)/sigma*(t - t0)/sigma);
 }
 
 
@@ -46,7 +46,7 @@ void exfield(int t, int nx, float *ex, float *hy) {
     for (int i = idx+1; i < nx; i += stx)
         ex[i] += 0.5 * (hy[i-1] - hy[i]);
     /* put a Gaussian pulse in the middle */
-    if (idx == nx/2) ex[nx/2] = gaussian(t, 40, 12);
+    if (idx == nx/2) ex[nx/2] = gaussian(t, 40, 12.0f);
 }
 
 
@@ -93,7 +93,7 @@ def main():
     ntime.record()
     ntime.synchronize()
 
-    time = stime.time_till(ntime) * 1e-3
+    time = stime.time_till(ntime)*1e-3
     print(f"Total compute time on GPU: {time:.3f} s")
 
     print(ex[0:50])
