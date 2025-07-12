@@ -14,7 +14,7 @@ plt.style.use("../pyplot.mplstyle")
 
 
 def gaussian(t: int, t0: int, sigma: float) -> float:
-    return np.exp(-0.5 * ((t - t0)/sigma)**2)
+    return np.exp(-0.5*((t - t0)/sigma)**2)
 
 
 def main():
@@ -33,7 +33,7 @@ def main():
     writer = fwriter(fps=15, codec='h264', bitrate=2000, metadata=data)
 
     # draw an empty plot, but preset the plot x- and y- limits
-    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace": 0.2})
+    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
     fig.suptitle(r"FDTD simulation of a pulse with absorbing boundary conditions")
     axline, = ax.plot(ex, color="black", linewidth=1)
     ax.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
@@ -45,14 +45,14 @@ def main():
     with writer.saving(fig, "fd1d_1_2.mp4", 300):
         for t in np.arange(1, ns+1).astype(np.int32):
             # calculate the Ex field
-            ex[1:nx] = ex[1:nx] + 0.5 * (hy[0:nx-1] - hy[1:nx])
+            ex[1:nx] += 0.5 * (hy[0:nx-1] - hy[1:nx])
             # put a Gaussian pulse in the middle
-            ex[nx//2] = gaussian(t, 40, 12)
+            ex[nx//2] = gaussian(t, 40, 12.0)
             # absorbing boundary conditions
             ex[0], bc[0], bc[1] = bc[0], bc[1], ex[1]
             ex[nx-1], bc[3], bc[2] = bc[3], bc[2], ex[nx-2]
             # calculate the Hy field
-            hy[0:nx-1] = hy[0:nx-1] + 0.5 * (ex[0:nx-1] - ex[1:nx])
+            hy[0:nx-1] += 0.5 * (ex[0:nx-1] - ex[1:nx])
 
             axline.set_ydata(ex)
             axtime.set_text(rf"$T$ = {t}")
