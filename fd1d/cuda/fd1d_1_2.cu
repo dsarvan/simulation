@@ -9,23 +9,23 @@
 #include <math.h>
 #include <cuda_runtime.h>
 
-#define idx (blockIdx.x * blockDim.x + threadIdx.x)
-#define stx (blockDim.x * gridDim.x)
+#define idx blockIdx.x*blockDim.x+threadIdx.x
+#define stx blockDim.x*gridDim.x
 
 
 __device__
 float gaussian(int t, int t0, float sigma) {
-    return exp(-0.5 * ((t - t0)/sigma) * ((t - t0)/sigma));
+    return exp(-0.5*(t - t0)/sigma*(t - t0)/sigma);
 }
 
 
 __global__
 void exfield(int t, int nx, float *ex, float *hy) {
     /* calculate the Ex field */
-    for (int i = idx + 1; i < nx; i += stx)
-        ex[i] = ex[i] + 0.5 * (hy[i-1] - hy[i]);
+    for (int i = idx+1; i < nx; i += stx)
+        ex[i] += 0.5 * (hy[i-1] - hy[i]);
     /* put a Gaussian pulse in the middle */
-    if (idx == nx/2) ex[nx/2] = gaussian(t, 40, 12);
+    if (idx == nx/2) ex[nx/2] = gaussian(t, 40, 12.0f);
 }
 
 
@@ -35,8 +35,8 @@ void hyfield(int nx, float *ex, float *hy, float *bc) {
     if (idx == 0) ex[0] = bc[0], bc[0] = bc[1], bc[1] = ex[1];
     if (idx == nx-1) ex[nx-1] = bc[3], bc[3] = bc[2], bc[2] = ex[nx-2];
     /* calculate the Hy field */
-    for (int i = idx; i < nx - 1; i += stx)
-        hy[i] = hy[i] + 0.5 * (ex[i] - ex[i+1]);
+    for (int i = idx; i < nx-1; i += stx)
+        hy[i] += 0.5 * (ex[i] - ex[i+1]);
 }
 
 
