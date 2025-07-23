@@ -14,11 +14,11 @@ plt.style.use("../pyplot.mplstyle")
 
 
 def gaussian(t: int, t0: int, sigma: float) -> float:
-    return np.exp(-0.5 * ((t - t0)/sigma)**2)
+    return np.exp(-0.5*((t - t0)/sigma)**2)
 
 
 def dielectric(nx: int, epsr: float) -> np.ndarray:
-    cb = 0.5 * np.ones(nx, dtype=np.float64)
+    cb = 0.5 + np.zeros(nx, dtype=np.float64)
     cb[nx//2:] = 0.5/epsr
     return cb
 
@@ -33,7 +33,7 @@ def main():
 
     bc = np.zeros(4, dtype=np.float64)
 
-    epsr: float = 4  # relative permittivity
+    epsr: float = 4.0  # relative permittivity
     cb: np.ndarray = dielectric(nx, epsr)
 
     # define the meta data for the movie
@@ -42,9 +42,9 @@ def main():
     writer = fwriter(fps=15, codec='h264', bitrate=2000, metadata=data)
 
     # draw an empty plot, but preset the plot x- and y- limits
-    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace": 0.2})
+    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
     fig.suptitle(r"FDTD simulation of a pulse striking dielectric material")
-    medium = (0.5/cb - 1)/(epsr - 1)*1e3 if epsr > 1 else (0.5/cb - 1)
+    medium = (0.5/cb-1)/(epsr-1)*1e3 if epsr > 1 else (0.5/cb-1)
     medium[medium==0] = -1e3
     axline, = ax.plot(ex, color="black", linewidth=1)
     ax.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
@@ -58,14 +58,14 @@ def main():
     with writer.saving(fig, "fd1d_1_3.mp4", 300):
         for t in np.arange(1, ns+1).astype(np.int32):
             # calculate the Ex field
-            ex[1:nx] = ex[1:nx] + cb[1:nx] * (hy[0:nx-1] - hy[1:nx])
+            ex[1:nx] += cb[1:nx] * (hy[0:nx-1] - hy[1:nx])
             # put a Gaussian pulse at the low end
-            ex[1] = ex[1] + gaussian(t, 40, 12)
+            ex[1] += gaussian(t, 40, 12.0)
             # absorbing boundary conditions
             ex[0], bc[0], bc[1] = bc[0], bc[1], ex[1]
             ex[nx-1], bc[3], bc[2] = bc[3], bc[2], ex[nx-2]
             # calculate the Hy field
-            hy[0:nx-1] = hy[0:nx-1] + 0.5 * (ex[0:nx-1] - ex[1:nx])
+            hy[0:nx-1] += 0.5 * (ex[0:nx-1] - ex[1:nx])
 
             axline.set_ydata(ex)
             axtime.set_text(rf"$T$ = {t}")
