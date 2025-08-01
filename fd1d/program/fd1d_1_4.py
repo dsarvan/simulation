@@ -13,9 +13,9 @@ plt.style.use("../pyplot.mplstyle")
 
 
 def visualize(ns: int, nx: int, epsr: float, cb: np.ndarray, ex: np.ndarray) -> None:
-    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace": 0.2})
+    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
     fig.suptitle(r"FDTD simulation of a sinusoidal striking dielectric material")
-    medium = (0.5/cb - 1)/(epsr - 1)*1e3 if epsr > 1 else (0.5/cb - 1)
+    medium = (0.5/cb-1)/(epsr-1)*1e3 if epsr > 1 else (0.5/cb-1)
     medium[medium==0] = -1e3
     ax.plot(ex, color="black", linewidth=1)
     ax.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
@@ -30,11 +30,11 @@ def visualize(ns: int, nx: int, epsr: float, cb: np.ndarray, ex: np.ndarray) -> 
 
 def sinusoidal(t: int, ds: float, freq: float) -> float:
     dt: float = ds/6e8  # time step (s)
-    return np.sin(2 * np.pi * freq * dt * t)
+    return np.sin(2*np.pi*freq*dt*t)
 
 
 def dielectric(nx: int, epsr: float) -> np.ndarray:
-    cb = 0.5 * np.ones(nx, dtype=np.float64)
+    cb = 0.5 + np.zeros(nx, dtype=np.float64)
     cb[nx//2:] = 0.5/epsr
     return cb
 
@@ -51,19 +51,19 @@ def main():
 
     ds: float = 0.01  # spatial step (m)
     dt: float = ds/6e8  # time step (s)
-    epsr: float = 4  # relative permittivity
+    epsr: float = 4.0  # relative permittivity
     cb: np.ndarray = dielectric(nx, epsr)
 
     for t in np.arange(1, ns+1).astype(np.int32):
         # calculate the Ex field
-        ex[1:nx] = ex[1:nx] + cb[1:nx] * (hy[0:nx-1] - hy[1:nx])
+        ex[1:nx] += cb[1:nx] * (hy[0:nx-1] - hy[1:nx])
         # put a sinusoidal wave at the low end
-        ex[1] = ex[1] + sinusoidal(t, 0.01, 700e6)
+        ex[1] += sinusoidal(t, 0.01, 700e6)
         # absorbing boundary conditions
         ex[0], bc[0], bc[1] = bc[0], bc[1], ex[1]
         ex[nx-1], bc[3], bc[2] = bc[3], bc[2], ex[nx-2]
         # calculate the Hy field
-        hy[0:nx-1] = hy[0:nx-1] + 0.5 * (ex[0:nx-1] - ex[1:nx])
+        hy[0:nx-1] += 0.5 * (ex[0:nx-1] - ex[1:nx])
 
     visualize(ns, nx, epsr, cb, ex)
 
