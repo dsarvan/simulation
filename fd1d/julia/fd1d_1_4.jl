@@ -12,9 +12,9 @@ plt.matplotlib.style.use("../pyplot.mplstyle")
 
 
 function visualize(ns::Int, nx::Int, epsr::Float64, cb::Array{Float64}, ex::Array{Float64})::Nothing
-    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw=Dict("hspace" => 0.2))
+    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw=Dict("hspace"=>0.2))
     fig.suptitle(raw"FDTD simulation of a sinusoidal striking dielectric material")
-    medium = epsr > 1 ? (div.(0.5,cb) .- 1)/(epsr - 1)*1e3 : div.(0.5,cb) .- 1
+    medium = epsr > 1 ? (div.(0.5,cb).-1)/(epsr-1)*1e3 : div.(0.5,cb).-1
     medium[medium.==0] .= -1e3
     ax.plot(ex, color="black", linewidth=1)
     ax.fill_between(0:nx-1, medium, medium[1], color="y", alpha=0.3)
@@ -30,12 +30,12 @@ end
 
 function sinusoidal(t::Int32, ds::Float64, freq::Float64)::Float64
     dt::Float64 = ds/6e8  # time step (s)
-    return sin(2 * pi * freq * dt * t)
+    return sin(2*pi*freq*dt*t)
 end
 
 
 function dielectric(nx::Int, epsr::Float64)::Array{Float64}
-    cb = 0.5 * ones(Float64, nx)
+    cb = 0.5 .+ zeros(Float64, nx)
     cb[div(nx,2)+1:nx] .= 0.5/epsr
     return cb
 end
