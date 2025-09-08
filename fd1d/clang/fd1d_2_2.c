@@ -22,7 +22,7 @@ typedef struct {
 
 
 double gaussian(int t, int t0, double sigma) {
-    return exp(-0.5 * ((t - t0)/sigma) * ((t - t0)/sigma));
+    return exp(-0.5*(t - t0)/sigma*(t - t0)/sigma);
 }
 
 
@@ -46,9 +46,9 @@ void fourier(int t, int nf, int nx, double dt, double *freq, double *ex, ftrans 
 void dxfield(int t, int nx, double *dx, double *hy) {
     /* calculate the electric flux density Dx */
     for (int i = 1; i < nx; i++)
-        dx[i] = dx[i] + 0.5 * (hy[i-1] - hy[i]);
+        dx[i] += 0.5 * (hy[i-1] - hy[i]);
     /* put a Gaussian pulse at the low end */
-    dx[1] = dx[1] + gaussian(t, 50, 10);
+    dx[1] += gaussian(t, 50, 10.0);
 }
 
 
@@ -56,7 +56,7 @@ void exfield(int nx, medium *md, double *dx, double *ix, double *ex) {
     /* calculate the Ex field from Dx */
     for (int i = 1; i < nx; i++) {
         ex[i] = md->nax[i] * (dx[i] - ix[i]);
-        ix[i] = ix[i] + md->nbx[i] * ex[i];
+        ix[i] += md->nbx[i] * ex[i];
     }
 }
 
@@ -66,20 +66,20 @@ void hyfield(int nx, double *ex, double *hy, double *bc) {
     ex[0] = bc[0], bc[0] = bc[1], bc[1] = ex[1];
     ex[nx-1] = bc[3], bc[3] = bc[2], bc[2] = ex[nx-2];
     /* calculate the Hy field */
-    for (int i = 0; i < nx - 1; i++)
-        hy[i] = hy[i] + 0.5 * (ex[i] - ex[i+1]);
+    for (int i = 0; i < nx-1; i++)
+        hy[i] += 0.5 * (ex[i] - ex[i+1]);
 }
 
 
 medium dielectric(int nx, double dt, double epsr, double sigma) {
     medium md;
-    md.nax = (double *) calloc(nx, sizeof(*md.nax));
-    md.nbx = (double *) calloc(nx, sizeof(*md.nbx));
-    for (int i = 0; i < nx; md.nax[i] = 1.0f, i++);
+    md.nax = (double*) calloc(nx, sizeof(*md.nax));
+    md.nbx = (double*) calloc(nx, sizeof(*md.nbx));
+    for (int i = 0; i < nx; md.nax[i] = 1.0, i++);
     double eps0 = 8.854e-12;  /* vacuum permittivity (F/m) */
     for (int i = nx/2; i < nx; i++) {
-        md.nax[i] = 1/(epsr + (sigma * dt/eps0));
-        md.nbx[i] = sigma * dt/eps0;
+        md.nax[i] = 1/(epsr + sigma*dt/eps0);
+        md.nbx[i] = sigma*dt/eps0;
     }
     return md;
 }
@@ -90,17 +90,17 @@ int main() {
     int nx = 512;  /* number of grid points */
     int ns = 740;  /* number of time steps */
 
-    double *dx = (double *) calloc(nx, sizeof(*dx));
-    double *ex = (double *) calloc(nx, sizeof(*ex));
-    double *ix = (double *) calloc(nx, sizeof(*ix));
-    double *hy = (double *) calloc(nx, sizeof(*hy));
+    double *dx = (double*) calloc(nx, sizeof(*dx));
+    double *ex = (double*) calloc(nx, sizeof(*ex));
+    double *ix = (double*) calloc(nx, sizeof(*ix));
+    double *hy = (double*) calloc(nx, sizeof(*hy));
 
-    double bc[4] = {0.0f};
+    double bc[4] = {0.0};
 
     double ds = 0.01;  /* spatial step (m) */
     double dt = ds/6e8;  /* time step (s) */
-    double epsr = 4;  /* relative permittivity */
-    double sigma = 0;  /* conductivity (S/m) */
+    double epsr = 4.0;  /* relative permittivity */
+    double sigma = 0.0;  /* conductivity (S/m) */
     medium md = dielectric(nx, dt, epsr, sigma);
 
     /* frequency 100 MHz, 200 MHz, 500 MHz */
@@ -108,13 +108,13 @@ int main() {
     int nf = (sizeof freq)/(sizeof freq[0]);  /* number of frequencies */
 
     ftrans ft;
-    ft.r_pt = (double *) calloc(nf*nx, sizeof(*ft.r_pt));
-    ft.i_pt = (double *) calloc(nf*nx, sizeof(*ft.i_pt));
-    ft.r_in = (double *) calloc(nf, sizeof(*ft.r_in));
-    ft.i_in = (double *) calloc(nf, sizeof(*ft.i_in));
+    ft.r_pt = (double*) calloc(nf*nx, sizeof(*ft.r_pt));
+    ft.i_pt = (double*) calloc(nf*nx, sizeof(*ft.i_pt));
+    ft.r_in = (double*) calloc(nf, sizeof(*ft.r_in));
+    ft.i_in = (double*) calloc(nf, sizeof(*ft.i_in));
 
-    double *amplt = (double *) calloc(nf*nx, sizeof(*amplt));
-    double *phase = (double *) calloc(nf*nx, sizeof(*phase));
+    double *amplt = (double*) calloc(nf*nx, sizeof(*amplt));
+    double *phase = (double*) calloc(nf*nx, sizeof(*phase));
 
     for (int t = 1; t <= ns; t++) {
         dxfield(t, nx, dx, hy);
