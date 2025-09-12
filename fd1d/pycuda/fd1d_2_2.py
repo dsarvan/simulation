@@ -21,9 +21,9 @@ plt.style.use("../pyplot.mplstyle")
 
 
 def visualize(ns: int, nx: int, epsr: float, sigma: float, nax: np.ndarray, ex: np.ndarray) -> None:
-    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace": 0.2})
+    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
     fig.suptitle(r"FDTD simulation of a pulse striking dielectric material")
-    medium = (1 - nax)/(1 - nax[-1])*1e3 if epsr > 1 else (1 - nax)
+    medium = (1-nax)/(1-nax[-1])*1e3 if epsr > 1 else (1-nax)
     medium[medium==0] = -1e3
     ax.plot(ex, color="black", linewidth=1)
     ax.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
@@ -34,13 +34,13 @@ def visualize(ns: int, nx: int, epsr: float, sigma: float, nax: np.ndarray, ex: 
     ax.text(0.90, 0.90, rf"$\epsilon_r$ = {epsr}", transform=ax.transAxes)
     ax.text(0.85, 0.80, rf"$\sigma$ = {sigma} $S/m$", transform=ax.transAxes)
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
-    plt.show()
+    plt.savefig("fd1d_2_2.png", dpi=100)
 
 
 def amplitude(ns: int, nx: int, epsr: float, sigma: float, nax: np.ndarray, amp: np.ndarray) -> None:
-    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace": 0.2})
+    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
     fig.suptitle(r"The discrete Fourier transform with pulse as its source")
-    medium = (1 - nax)/(1 - nax[-1])*1e3 if epsr > 1 else (1 - nax)
+    medium = (1-nax)/(1-nax[-1])*1e3 if epsr > 1 else (1-nax)
     medium[medium==0] = -1e3
     ax.plot(amp, color="black", linewidth=1)
     ax.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
@@ -51,7 +51,7 @@ def amplitude(ns: int, nx: int, epsr: float, sigma: float, nax: np.ndarray, amp:
     ax.text(0.90, 0.90, rf"$\epsilon_r$ = {epsr}", transform=ax.transAxes)
     ax.text(0.85, 0.80, rf"$\sigma$ = {sigma} $S/m$", transform=ax.transAxes)
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
-    plt.show()
+    plt.savefig("fd1d_amp_2_2.png", dpi=100)
 
 
 medium = namedtuple('medium', (
@@ -66,8 +66,8 @@ ftrans = namedtuple('ftrans', (
 
 
 kernel = """
-#define idx (blockIdx.x * blockDim.x + threadIdx.x)
-#define stx (blockDim.x * gridDim.x)
+#define idx blockIdx.x*blockDim.x+threadIdx.x
+#define stx blockDim.x*gridDim.x
 
 
 typedef struct {
@@ -83,7 +83,7 @@ typedef struct {
 
 __device__
 float gaussian(int t, int t0, float sigma) {
-    return exp(-0.5 * ((t - t0)/sigma) * ((t - t0)/sigma));
+    return exp(-0.5*(t - t0)/sigma*(t - t0)/sigma);
 }
 
 
@@ -108,19 +108,19 @@ void fourier(int t, int nf, int nx, float dt, float *freq, float *ex, ftrans *ft
 __global__
 void dxfield(int t, int nx, float *dx, float *hy) {
     /* calculate the electric flux density Dx */
-    for (int i = idx + 1; i < nx; i += stx)
-        dx[i] = dx[i] + 0.5 * (hy[i-1] - hy[i]);
+    for (int i = idx+1; i < nx; i += stx)
+        dx[i] += 0.5 * (hy[i-1] - hy[i]);
     /* put a Gaussian pulse at the low end */
-    if (idx == 1) dx[1] = dx[1] + gaussian(t, 50, 10);
+    if (idx == 1) dx[1] += gaussian(t, 50, 10.0f);
 }
 
 
 __global__
 void exfield(int nx, medium *md, float *dx, float *ix, float *ex) {
     /* calculate the Ex field from Dx */
-    for (int i = idx + 1; i < nx; i += stx) {
+    for (int i = idx+1; i < nx; i += stx) {
         ex[i] = md->nax[i] * (dx[i] - ix[i]);
-        ix[i] = ix[i] + md->nbx[i] * ex[i];
+        ix[i] += md->nbx[i] * ex[i];
     }
 }
 
@@ -131,20 +131,20 @@ void hyfield(int nx, float *ex, float *hy, float *bc) {
     if (idx == 0) ex[0] = bc[0], bc[0] = bc[1], bc[1] = ex[1];
     if (idx == nx-1) ex[nx-1] = bc[3], bc[3] = bc[2], bc[2] = ex[nx-2];
     /* calculate the Hy field */
-    for (int i = idx; i < nx - 1; i += stx)
-        hy[i] = hy[i] + 0.5 * (ex[i] - ex[i+1]);
+    for (int i = idx; i < nx-1; i += stx)
+        hy[i] += 0.5 * (ex[i] - ex[i+1]);
 }
 """
 
 
 def dielectric(nx: int, dt: float, epsr: float, sigma: float) -> medium:
     md = medium(
-        nax = gpuarray.ones(nx, dtype=np.float32),
-        nbx = gpuarray.zeros(nx, dtype=np.float32),
+        nax = gpuarray.empty(nx, dtype=np.float32).fill(1.0),
+        nbx = gpuarray.empty(nx, dtype=np.float32).fill(0.0),
     )
     eps0: float = 8.854e-12  # vacuum permittivity (F/m)
-    md.nax[nx//2:] = 1/(epsr + (sigma * dt/eps0))
-    md.nbx[nx//2:] = sigma * dt/eps0
+    md.nax[nx//2:] = 1/(epsr + sigma*dt/eps0)
+    md.nbx[nx//2:] = sigma*dt/eps0
     return md
 
 
@@ -162,8 +162,8 @@ def main():
 
     ds = np.float32(0.01)  # spatial step (m)
     dt = np.float32(ds/6e8)  # time step (s)
-    epsr: float = 4  # relative permittivity
-    sigma: float = 0  # conductivity (S/m)
+    epsr: float = 4.0  # relative permittivity
+    sigma: float = 0.0  # conductivity (S/m)
     md: medium = dielectric(nx, dt, epsr, sigma)
 
     mdptr = gpuarray.to_gpu(np.array([
@@ -189,14 +189,11 @@ def main():
     amplt = np.zeros((nf, nx), dtype=np.float32)
     phase = np.zeros((nf, nx), dtype=np.float32)
 
-    numSM: int = drv.Device(0).multiprocessor_count
-
     blockDimx: int = 256
-    blockDimy: int = int(nf)
-    gridDimx: int = 32*numSM
+    gridDimx: int = int((nx+blockDimx-1)/blockDimx)
 
     gridDim = (gridDimx,1,1)
-    blockDim = (blockDimx,blockDimy,1)
+    blockDim = (blockDimx,1,1)
 
     mod = SourceModule(kernel)
     fourier = mod.get_function("fourier")
@@ -207,7 +204,7 @@ def main():
     for t in np.arange(1, ns+1).astype(np.int32):
         dxfield(t, nx, dx, hy, grid=gridDim, block=blockDim)
         exfield(nx, mdptr, dx, ix, ex, grid=gridDim, block=blockDim)
-        fourier(t, nf, nx, dt, freq, ex, ftptr, grid=gridDim, block=blockDim)
+        fourier(t, nf, nx, dt, freq, ex, ftptr, grid=gridDim, block=(256,4,1))
         hyfield(nx, ex, hy, bc, grid=gridDim, block=blockDim)
 
     drv.Context.synchronize()
