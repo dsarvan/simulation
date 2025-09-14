@@ -16,9 +16,9 @@ plt.style.use("../pyplot.mplstyle")
 
 
 def visualize(ns: int, nx: int, epsr: float, sigma: float, nax: np.ndarray, ex: np.ndarray) -> None:
-    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace": 0.2})
+    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
     fig.suptitle(r"FDTD simulation of a pulse striking Debye dielectric material")
-    medium = (1 - nax)/(1 - nax[-1])*1e3 if epsr > 1 else (1 - nax)
+    medium = (1-nax)/(1-nax[-1])*1e3 if epsr > 1 else (1-nax)
     medium[medium==0] = -1e3
     ax.plot(ex, color="black", linewidth=1)
     ax.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
@@ -33,9 +33,9 @@ def visualize(ns: int, nx: int, epsr: float, sigma: float, nax: np.ndarray, ex: 
 
 
 def amplitude(ns: int, nx: int, epsr: float, sigma: float, nax: np.ndarray, amp: np.ndarray) -> None:
-    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace": 0.2})
+    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
     fig.suptitle(r"The discrete Fourier transform with pulse as its source")
-    medium = (1 - nax)/(1 - nax[-1])*1e3 if epsr > 1 else (1 - nax)
+    medium = (1-nax)/(1-nax[-1])*1e3 if epsr > 1 else (1-nax)
     medium[medium==0] = -1e3
     ax.plot(amp, color="black", linewidth=1)
     ax.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
@@ -62,7 +62,7 @@ ftrans = namedtuple('ftrans', (
 
 
 def gaussian(t: int, t0: int, sigma: float) -> float:
-    return np.exp(-0.5 * ((t - t0)/sigma)**2)
+    return np.exp(-0.5*((t - t0)/sigma)**2)
 
 
 def fourier(t: int, nf: int, nx: int, dt: float, freq: np.ndarray, ex: np.ndarray, ft: ftrans) -> None:
@@ -77,15 +77,15 @@ def fourier(t: int, nf: int, nx: int, dt: float, freq: np.ndarray, ex: np.ndarra
 
 def dxfield(t: int, nx: int, dx: np.ndarray, hy: np.ndarray) -> None:
     # calculate the electric flux density Dx
-    dx[1:nx] = dx[1:nx] + 0.5 * (hy[0:nx-1] - hy[1:nx])
+    dx[1:nx] += 0.5 * (hy[0:nx-1] - hy[1:nx])
     # put a Gaussian pulse at the low end
-    dx[1] = dx[1] + gaussian(t, 50, 10)
+    dx[1] += gaussian(t, 50, 10.0)
 
 
 def exfield(nx: int, md: medium, dx: np.ndarray, ix: np.ndarray, sx: np.ndarray, ex: np.ndarray) -> None:
     # calculate the Ex field from Dx
     ex[1:nx] = md.nax[1:nx] * (dx[1:nx] - ix[1:nx] - md.ncx[1:nx] * sx[1:nx])
-    ix[1:nx] = ix[1:nx] + md.nbx[1:nx] * ex[1:nx]
+    ix[1:nx] += md.nbx[1:nx] * ex[1:nx]
     sx[1:nx] = md.ncx[1:nx] * sx[1:nx] + md.ndx[1:nx] * ex[1:nx]
 
 
@@ -94,21 +94,21 @@ def hyfield(nx: int, ex: np.ndarray, hy: np.ndarray, bc: np.ndarray) -> None:
     ex[0], bc[0], bc[1] = bc[0], bc[1], ex[1]
     ex[nx-1], bc[3], bc[2] = bc[3], bc[2], ex[nx-2]
     # calculate the Hy field
-    hy[0:nx-1] = hy[0:nx-1] + 0.5 * (ex[0:nx-1] - ex[1:nx])
+    hy[0:nx-1] += 0.5 * (ex[0:nx-1] - ex[1:nx])
 
 
 def dielectric(nx: int, dt: float, chi: float, tau: float, epsr: float, sigma: float) -> medium:
     md = medium(
-        nax = np.ones(nx, dtype=np.float64),
-        nbx = np.zeros(nx, dtype=np.float64),
-        ncx = np.zeros(nx, dtype=np.float64),
-        ndx = np.zeros(nx, dtype=np.float64),
+        nax = np.full(nx, 1.0, dtype=np.float64),
+        nbx = np.full(nx, 0.0, dtype=np.float64),
+        ncx = np.full(nx, 0.0, dtype=np.float64),
+        ndx = np.full(nx, 0.0, dtype=np.float64),
     )
     eps0: float = 8.854e-12  # vacuum permittivity (F/m)
-    md.nax[nx//2:] = 1/(epsr + (sigma * dt/eps0) + chi * dt/tau)
-    md.nbx[nx//2:] = sigma * dt/eps0
+    md.nax[nx//2:] = 1/(epsr + sigma*dt/eps0 + chi*dt/tau)
+    md.nbx[nx//2:] = sigma*dt/eps0
     md.ncx[nx//2:] = exp(-dt/tau)
-    md.ndx[nx//2:] = chi * dt/tau
+    md.ndx[nx//2:] = chi*dt/tau
     return md
 
 
@@ -127,9 +127,9 @@ def main():
 
     ds: float = 0.01  # spatial step (m)
     dt: float = ds/6e8  # time step (s)
-    chi: float = 2  # relaxation susceptibility
+    chi: float = 2.0  # relaxation susceptibility
     tau: float = 0.001e-6  # relaxation time (s)
-    epsr: float = 2  # relative permittivity
+    epsr: float = 2.0  # relative permittivity
     sigma: float = 0.01  # conductivity (S/m)
     md: medium = dielectric(nx, dt, chi, tau, epsr, sigma)
 
