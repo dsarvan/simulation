@@ -13,9 +13,9 @@ plt.matplotlib.style.use("../pyplot.mplstyle")
 
 
 function visualize(ns::Int, nx::Int, epsr::Float64, sigma::Float64, nax::Array{Float64}, ex::Array{Float64})::Nothing
-    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw=Dict("hspace" => 0.2))
+    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw=Dict("hspace"=>0.2))
     fig.suptitle(raw"FDTD simulation of a pulse striking Debye dielectric material")
-    medium = epsr > 1 ? (1 .- nax)/(1 - nax[end])*1e3 : (1 .- nax)
+    medium = epsr > 1 ? (1 .-nax)/(1-nax[end])*1e3 : (1 .-nax)
     medium[medium.==0] .= -1e3
     ax.plot(ex, color="black", linewidth=1)
     ax.fill_between(0:nx-1, medium, medium[1], color="y", alpha=0.3)
@@ -31,9 +31,9 @@ end
 
 
 function amplitude(ns::Int, nx::Int, epsr::Float64, sigma::Float64, nax::Array{Float64}, amp::Array{Float64})::Nothing
-    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw=Dict("hspace" => 0.2))
+    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw=Dict("hspace"=>0.2))
     fig.suptitle(raw"The discrete Fourier transform with pulse as its source")
-    medium = epsr > 1 ? (1 .- nax)/(1 - nax[end])*1e3 : (1 .- nax)
+    medium = epsr > 1 ? (1 .-nax)/(1-nax[end])*1e3 : (1 .-nax)
     medium[medium.==0] .= -1e3
     ax.plot(amp, color="black", linewidth=1)
     ax.fill_between(0:nx-1, medium, medium[1], color="y", alpha=0.3)
@@ -65,7 +65,7 @@ end
 
 
 function gaussian(t::Int32, t0::Int, sigma::Float64)::Float64
-    return exp(-0.5 * ((t - t0)/sigma)^2)
+    return exp(-0.5*((t - t0)/sigma)^2)
 end
 
 
@@ -92,7 +92,7 @@ end
 function exfield(nx::Int, md::medium, dx::Array{Float64}, ix::Array{Float64}, sx::Array{Float64}, ex::Array{Float64})
     # calculate the Ex field from Dx
     @views ex[2:nx] .= md.nax[2:nx] .* (dx[2:nx] .- ix[2:nx] .- md.ncx[2:nx] .* sx[2:nx])
-    @views ix[2:nx] .= ix[2:nx] .+ md.nbx[2:nx] .* ex[2:nx]
+    @views ix[2:nx] .+= md.nbx[2:nx] .* ex[2:nx]
     @views sx[2:nx] .= md.ncx[2:nx] .* sx[2:nx] .+ md.ndx[2:nx] .* ex[2:nx]
 end
 
@@ -108,16 +108,16 @@ end
 
 function dielectric(nx::Int, dt::Float64, chi::Float64, tau::Float64, epsr::Float64, sigma::Float64)::medium
     md = medium(
-        ones(Float64, nx),
-        zeros(Float64, nx),
-        zeros(Float64, nx),
-        zeros(Float64, nx),
+        fill(1.0::Float64, nx),
+        fill(0.0::Float64, nx),
+        fill(0.0::Float64, nx),
+        fill(0.0::Float64, nx),
     )
     eps0::Float64 = 8.854e-12  # vaccum permittivity (F/m)
-    md.nax[div(nx,2)+1:nx] .= 1/(epsr + (sigma * dt/eps0) + chi * dt/tau)
-    md.nbx[div(nx,2)+1:nx] .= sigma * dt/eps0
+    md.nax[div(nx,2)+1:nx] .= 1/(epsr + sigma*dt/eps0 + chi*dt/tau)
+    md.nbx[div(nx,2)+1:nx] .= sigma*dt/eps0
     md.ncx[div(nx,2)+1:nx] .= exp(-dt/tau)
-    md.ndx[div(nx,2)+1:nx] .= chi * dt/tau
+    md.ndx[div(nx,2)+1:nx] .= chi*dt/tau
     return md
 end
 
