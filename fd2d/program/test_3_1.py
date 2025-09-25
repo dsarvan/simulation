@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# File: fd2d_3_1.py
+# File: test_3_1.py
 # Name: D.Saravanan
 # Date: 17/01/2022
 
@@ -8,6 +8,7 @@
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d
 import numpy as np
+import time
 
 plt.style.use("classic")
 plt.style.use("../pyplot.mplstyle")
@@ -22,7 +23,7 @@ def surfaceplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
     ax.set(xlim=(0, nx), ylim=(0, ny), zlim=(0, 1))
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$", zlabel=r"$E_z\;(V/m)$")
     ax.zaxis.set_rotate_label(False); ax.view_init(elev=20.0, azim=45)
-    plt.savefig("fd2d_surface_3_1.png", dpi=100)
+    plt.show()
 
 
 def contourplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
@@ -34,7 +35,7 @@ def contourplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
     ax.set(xlim=(0, nx-1), ylim=(0, ny-1), aspect="equal")
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$")
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
-    plt.savefig("fd2d_contour_3_1.png", dpi=100)
+    plt.show()
 
 
 def gaussian(t: int, t0: int, sigma: float) -> float:
@@ -61,23 +62,29 @@ def hfield(nx: int, ny: int, ez: np.ndarray, hx: np.ndarray, hy: np.ndarray) -> 
 
 def main():
 
-    nx: int = 60  # number of grid points
-    ny: int = 60  # number of grid points
+    nx: int = 1024  # number of grid points
+    ny: int = 1024  # number of grid points
 
-    ns: int = 70  # number of time steps
+    ns: int = 5000  # number of time steps
 
-    dz = np.zeros((nx, ny), dtype=np.float64)
-    ez = np.zeros((nx, ny), dtype=np.float64)
-    hx = np.zeros((nx, ny), dtype=np.float64)
-    hy = np.zeros((nx, ny), dtype=np.float64)
+    dz = np.zeros((nx, ny), dtype=np.float32)
+    ez = np.zeros((nx, ny), dtype=np.float32)
+    hx = np.zeros((nx, ny), dtype=np.float32)
+    hy = np.zeros((nx, ny), dtype=np.float32)
 
-    naz = np.ones((nx, ny), dtype=np.float64)
+    naz = np.ones((nx, ny), dtype=np.float32)
+
+    stime = time.perf_counter()
 
     for t in np.arange(1, ns+1).astype(np.int32):
         dfield(t, nx, ny, dz, hx, hy)
         efield(nx, ny, naz, dz, ez)
         hfield(nx, ny, ez, hx, hy)
 
+    ntime = time.perf_counter()
+    print(f"Total compute time on CPU: {ntime - stime:.3f} s")
+
+    print(ez[2][0:50])
     surfaceplot(ns, nx, ny, ez)
     contourplot(ns, nx, ny, ez)
 
