@@ -10,14 +10,14 @@ using Base.Threads
 
 plt.matplotlib.style.use("classic")
 plt.matplotlib.style.use("../pyplot.mplstyle")
-meshgrid(xs, ys) = xs .* ones(length(ys))', ones(length(xs)) .* ys'
+meshgrid(xs, ys) = xs'.+ 0 .*ys, ys.+ 0 .*xs'
 
 
 function surfaceplot(ns::Int, nx::Int, ny::Int, ez::Array{Float64})::Nothing
-    fig, ax = plt.subplots(subplot_kw=Dict("projection" => "3d"))
+    fig, ax = plt.subplots(subplot_kw=Dict("projection"=>"3d"))
     fig.suptitle(raw"FDTD simulation of a pulse in free space")
-    xv, yv = meshgrid(0:ny-1, 0:nx-1)
-    ax.plot_surface(yv, xv, ez', rstride=1, cstride=1, cmap="gray", lw=0.25)
+    yv, xv = meshgrid(0:ny-1, 0:nx-1)
+    ax.plot_surface(xv, yv, ez, rstride=1, cstride=1, cmap="gray", lw=0.25)
     ax.text2D(0.1, 0.7, raw"$T$ = "*"$ns", transform=ax.transAxes)
     ax.set(xlim=(0, nx), ylim=(0, ny), zlim=(0, 1))
     ax.set(xlabel=raw"$x\;(cm)$", ylabel=raw"$y\;(cm)$", zlabel=raw"$E_z\;(V/m)$")
@@ -27,11 +27,11 @@ end
 
 
 function contourplot(ns::Int, nx::Int, ny::Int, ez::Array{Float64})::Nothing
-    fig, ax = plt.subplots(figsize=(4,4), gridspec_kw=Dict("hspace" => 0.2))
+    fig, ax = plt.subplots(figsize=(4,4), gridspec_kw=Dict("hspace"=>0.2))
     fig.suptitle(raw"FDTD simulation of a pulse in free space")
-    xv, yv = meshgrid(0:ny-1, 0:nx-1)
-    ax.contourf(yv, xv, ez', cmap="gray", alpha=0.75)
-    ax.contour(yv, xv, ez', colors="k", linewidths=0.25)
+    yv, xv = meshgrid(0:ny-1, 0:nx-1)
+    ax.contourf(xv, yv, ez, cmap="gray", alpha=0.75)
+    ax.contour(xv, yv, ez, colors="k", linewidths=0.25)
     ax.set(xlim=(0, nx-1), ylim=(0, ny-1), aspect="equal")
     ax.set(xlabel=raw"$x\;(cm)$", ylabel=raw"$y\;(cm)$")
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
@@ -40,7 +40,7 @@ end
 
 
 function gaussian(t::Int32, t0::Int, sigma::Float64)::Float64
-    return exp(-0.5 * ((t - t0)/sigma)^2)
+    return exp(-0.5*((t - t0)/sigma)^2)
 end
 
 
