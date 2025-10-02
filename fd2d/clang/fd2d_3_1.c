@@ -11,7 +11,7 @@
 
 
 double gaussian(int t, int t0, double sigma) {
-    return exp(-0.5 * ((t - t0)/sigma) * ((t - t0)/sigma));
+    return exp(-0.5*(t - t0)/sigma*(t - t0)/sigma);
 }
 
 
@@ -25,7 +25,7 @@ void dfield(int t, int nx, int ny, double *dz, double *hx, double *hy) {
         }
     }
     /* put a Gaussian pulse in the middle */
-    dz[nx/2*ny+ny/2] = gaussian(t, 20, 6);
+    dz[nx/2*ny+ny/2] = gaussian(t, 20, 6.0);
 }
 
 
@@ -44,8 +44,8 @@ void efield(int nx, int ny, double *naz, double *dz, double *ez) {
 void hfield(int nx, int ny, double *ez, double *hx, double *hy) {
     /* calculate the Hx and Hy field */
     #pragma omp parallel for collapse(2)
-    for (int i = 0; i < nx - 1; i++) {
-        for (int j = 0; j < ny - 1; j++) {
+    for (int i = 0; i < nx-1; i++) {
+        for (int j = 0; j < ny-1; j++) {
             int n = i*ny+j;
             hx[n] += 0.5 * (ez[n] - ez[n+1]);
             hy[n] -= 0.5 * (ez[n] - ez[n+ny]);
@@ -61,12 +61,12 @@ int main() {
 
     int ns = 70;  /* number of time steps */
 
-    double *dz = (double *) calloc(nx*ny, sizeof(*dz));
-    double *ez = (double *) calloc(nx*ny, sizeof(*ez));
-    double *hx = (double *) calloc(nx*ny, sizeof(*hx));
-    double *hy = (double *) calloc(nx*ny, sizeof(*hy));
+    double *dz = (double*) calloc(nx*ny, sizeof(*dz));
+    double *ez = (double*) calloc(nx*ny, sizeof(*ez));
+    double *hx = (double*) calloc(nx*ny, sizeof(*hx));
+    double *hy = (double*) calloc(nx*ny, sizeof(*hy));
 
-    double *naz = (double *) calloc(nx*ny, sizeof(*naz));
+    double *naz = (double*) calloc(nx*ny, sizeof(*naz));
     for (int i = 0; i < nx*ny; naz[i] = 1.0, i++);
 
     for (int t = 1; t <= ns; t++) {
