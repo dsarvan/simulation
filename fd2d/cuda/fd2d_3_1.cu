@@ -9,30 +9,30 @@
 #include <math.h>
 #include <cuda_runtime.h>
 
-#define idx (blockIdx.x * blockDim.x + threadIdx.x)
-#define idy (blockIdx.y * blockDim.y + threadIdx.y)
-#define stx (blockDim.x * gridDim.x)
-#define sty (blockDim.y * gridDim.y)
+#define idx blockIdx.x*blockDim.x+threadIdx.x
+#define idy blockIdx.y*blockDim.y+threadIdx.y
+#define stx blockDim.x*gridDim.x
+#define sty blockDim.y*gridDim.y
 
 
 __device__
 float gaussian(int t, int t0, float sigma) {
-    return exp(-0.5 * ((t - t0)/sigma) * ((t - t0)/sigma));
+    return exp(-0.5*(t - t0)/sigma*(t - t0)/sigma);
 }
 
 
 __global__
 void dfield(int t, int nx, int ny, float *dz, float *hx, float *hy) {
     /* calculate the electric flux density Dz */
-    for (int i = idy + 1; i < nx; i += sty) {
-        for (int j = idx + 1; j < ny; j += stx) {
+    for (int i = idy+1; i < nx; i += sty) {
+        for (int j = idx+1; j < ny; j += stx) {
             int n = i*ny+j;
             dz[n] += 0.5 * (hy[n] - hy[n-ny] - hx[n] + hx[n-1]);
         }
     }
     __syncthreads();
     /* put a Gaussian pulse in the middle */
-    if (idy == nx/2 && idx == ny/2) dz[nx/2*ny+ny/2] = gaussian(t, 20, 6);
+    if (idy == nx/2 && idx == ny/2) dz[nx/2*ny+ny/2] = gaussian(t, 20, 6.0f);
 }
 
 
@@ -51,8 +51,8 @@ void efield(int nx, int ny, float *naz, float *dz, float *ez) {
 __global__
 void hfield(int nx, int ny, float *ez, float *hx, float *hy) {
     /* calculate the Hx and Hy field */
-    for (int i = idy; i < nx - 1; i += sty) {
-        for (int j = idx; j < ny - 1; j += stx) {
+    for (int i = idy; i < nx-1; i += sty) {
+        for (int j = idx; j < ny-1; j += stx) {
             int n = i*ny+j;
             hx[n] += 0.5 * (ez[n] - ez[n+1]);
             hy[n] -= 0.5 * (ez[n] - ez[n+ny]);
@@ -90,8 +90,8 @@ int main() {
     dim3 gridDim, blockDim;
     blockDim.x = 16;
     blockDim.y = 16;
-    gridDim.x = (ny + blockDim.x - 1)/blockDim.x;
-    gridDim.y = (nx + blockDim.y - 1)/blockDim.y;
+    gridDim.x = (ny+blockDim.x-1)/blockDim.x;
+    gridDim.y = (nx+blockDim.y-1)/blockDim.y;
 
     for (int t = 1; t <= ns; t++) {
         dfield<<<gridDim, blockDim>>>(t, nx, ny, dz, hx, hy);
