@@ -1,4 +1,4 @@
-/* File: fd2d_3_2.cu
+/* File: test_3_2.cu
  * Name: D.Saravanan
  * Date: 18/01/2022
  * Simulation of a propagating sinusoidal in free space in the transverse
@@ -97,10 +97,10 @@ void pmlparam(int nx, int ny, int npml, pmlayer *pml) {
 
 int main() {
 
-    int nx = 60;  /* number of grid points */
-    int ny = 60;  /* number of grid points */
+    int nx = 1024;  /* number of grid points */
+    int ny = 1024;  /* number of grid points */
 
-    int ns = 100;  /* number of time steps */
+    int ns = 5000;  /* number of time steps */
 
     float *dz, *ez, *hx, *hy;
     /* allocate unified memory accessible from host or device */
@@ -172,6 +172,12 @@ int main() {
     gridDim.x = (ny+blockDim.x-1)/blockDim.x;
     gridDim.y = (nx+blockDim.y-1)/blockDim.y;
 
+    cudaEvent_t stime, ntime;
+    cudaEventCreate(&stime);
+    cudaEventCreate(&ntime);
+
+    cudaEventRecord(stime, 0);
+
     for (int t = 1; t <= ns; t++) {
         dfield<<<gridDim, blockDim>>>(t, nx, ny, &pml, dz, hx, hy);
         efield<<<gridDim, blockDim>>>(nx, ny, naz, dz, ez);
@@ -179,6 +185,19 @@ int main() {
     }
 
     cudaDeviceSynchronize();
+
+    cudaEventRecord(ntime, 0);
+    cudaEventSynchronize(ntime);
+
+    float time;
+    cudaEventElapsedTime(&time, stime, ntime);
+    printf("Total compute time on GPU: %.3f s\n", time/1000.0f);
+
+    cudaEventDestroy(stime);
+    cudaEventDestroy(ntime);
+
+    for (int i = 2*ny; i < 2*ny+50; i++)
+        printf("%e\n", ez[i]);
 
     cudaFree(pml.fx1);
     cudaFree(pml.fx2);
