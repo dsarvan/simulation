@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# File: fd2d_3_2.py
+# File: test_3_2.py
 # Name: D.Saravanan
 # Date: 18/01/2022
 
@@ -29,7 +29,7 @@ def surfaceplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
     ax.set(xlim=(0, nx), ylim=(0, ny), zlim=(0, 1))
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$", zlabel=r"$E_z\;(V/m)$")
     ax.zaxis.set_rotate_label(False); ax.view_init(elev=20.0, azim=45)
-    plt.savefig("fd2d_surface_3_2.png", dpi=100)
+    plt.show()
 
 
 def contourplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
@@ -41,7 +41,7 @@ def contourplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
     ax.set(xlim=(0, nx-1), ylim=(0, ny-1), aspect="equal")
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$")
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
-    plt.savefig("fd2d_contour_3_2.png", dpi=100)
+    plt.show()
 
 
 pmlayer = namedtuple('pmlayer', (
@@ -145,10 +145,10 @@ def pmlparam(nx: int, ny: int, npml: int, pml: pmlayer) -> None:
 
 def main():
 
-    nx = np.int32(60)  # number of grid points
-    ny = np.int32(60)  # number of grid points
+    nx = np.int32(1024)  # number of grid points
+    ny = np.int32(1024)  # number of grid points
 
-    ns = np.int32(100)  # number of time steps
+    ns = np.int32(5000)  # number of time steps
 
     dz = gpuarray.zeros(nx*ny, dtype=np.float32)
     ez = gpuarray.zeros(nx*ny, dtype=np.float32)
@@ -205,6 +205,11 @@ def main():
     efield = mod.get_function("efield")
     hfield = mod.get_function("hfield")
 
+    stime = drv.Event()
+    ntime = drv.Event()
+
+    stime.record()
+
     for t in np.arange(1, ns+1).astype(np.int32):
         dfield(t, nx, ny, pmlptr, dz, hx, hy, grid=gridDim, block=blockDim)
         efield(nx, ny, naz, dz, ez, grid=gridDim, block=blockDim)
@@ -212,6 +217,13 @@ def main():
 
     drv.Context.synchronize()
 
+    ntime.record()
+    ntime.synchronize()
+
+    time = stime.time_till(ntime)*1e-3
+    print(f"Total compute time on GPU: {time:.3f} s")
+
+    print(ez[2*ny:2*ny+50])
     surfaceplot(ns, nx, ny, ez.get().reshape(nx,ny))
     contourplot(ns, nx, ny, ez.get().reshape(nx,ny))
 
