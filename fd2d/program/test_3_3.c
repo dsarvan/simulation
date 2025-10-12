@@ -1,4 +1,4 @@
-/* File: fd2d_3_3.c
+/* File: test_3_3.c
  * Name: D.Saravanan
  * Date: 19/01/2022
  * Simulation of a plane wave pulse propagating in free space in the transverse
@@ -8,28 +8,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 
 
 typedef struct {
-    double *fx1;
-    double *fx2;
-    double *fx3;
-    double *fy1;
-    double *fy2;
-    double *fy3;
-    double *gx2;
-    double *gx3;
-    double *gy2;
-    double *gy3;
+    float *fx1;
+    float *fx2;
+    float *fx3;
+    float *fy1;
+    float *fy2;
+    float *fy3;
+    float *gx2;
+    float *gx3;
+    float *gy2;
+    float *gy3;
 } pmlayer;
 
 
-double gaussian(int t, int t0, double sigma) {
+float gaussian(int t, int t0, float sigma) {
     return exp(-0.5*(t - t0)/sigma*(t - t0)/sigma);
 }
 
 
-void ezinct(int ny, double *ezi, double *hxi, double *bc) {
+void ezinct(int ny, float *ezi, float *hxi, float *bc) {
     /* calculate the incident Ez */
     for (int j = 1; j < ny; j++) {
         ezi[j] += 0.5 * (hxi[j-1] - hxi[j]);
@@ -40,7 +41,7 @@ void ezinct(int ny, double *ezi, double *hxi, double *bc) {
 }
 
 
-void dfield(int t, int nx, int ny, pmlayer *pml, double *ezi, double *dz, double *hx, double *hy) {
+void dfield(int t, int nx, int ny, pmlayer *pml, float *ezi, float *dz, float *hx, float *hy) {
     /* calculate the electric flux density Dz */
     for (int i = 1; i < nx; i++) {
         for (int j = 1; j < ny; j++) {
@@ -49,11 +50,11 @@ void dfield(int t, int nx, int ny, pmlayer *pml, double *ezi, double *dz, double
         }
     }
     /* put a Gaussian pulse at the low end */
-    ezi[3] = gaussian(t, 20, 8.0);
+    ezi[3] = gaussian(t, 20, 8.0f);
 }
 
 
-void inctdz(int nx, int ny, int npml, double *hxi, double *dz) {
+void inctdz(int nx, int ny, int npml, float *hxi, float *dz) {
     /* incident Dz values */
     for (int i = npml-1; i <= nx-npml; i++) {
         dz[i*ny+(npml-1)] += 0.5 * hxi[npml-2];
@@ -62,7 +63,7 @@ void inctdz(int nx, int ny, int npml, double *hxi, double *dz) {
 }
 
 
-void efield(int nx, int ny, double *naz, double *dz, double *ez) {
+void efield(int nx, int ny, float *naz, float *dz, float *ez) {
     /* calculate the Ez field from Dz */
     for (int i = 0; i < nx; i++) {
         for (int j = 0; j < ny; j++) {
@@ -73,7 +74,7 @@ void efield(int nx, int ny, double *naz, double *dz, double *ez) {
 }
 
 
-void hxinct(int ny, double *ezi, double *hxi) {
+void hxinct(int ny, float *ezi, float *hxi) {
     /* calculate the incident Hx */
     for (int j = 0; j < ny-1; j++) {
         hxi[j] += 0.5 * (ezi[j] - ezi[j+1]);
@@ -81,7 +82,7 @@ void hxinct(int ny, double *ezi, double *hxi) {
 }
 
 
-void hfield(int nx, int ny, pmlayer *pml, double *ez, double *ihx, double *ihy, double *hx, double *hy) {
+void hfield(int nx, int ny, pmlayer *pml, float *ez, float *ihx, float *ihy, float *hx, float *hy) {
     /* calculate the Hx and Hy field */
     for (int i = 0; i < nx-1; i++) {
         for (int j = 0; j < ny-1; j++) {
@@ -95,7 +96,7 @@ void hfield(int nx, int ny, pmlayer *pml, double *ez, double *ihx, double *ihy, 
 }
 
 
-void incthx(int nx, int ny, int npml, double *ezi, double *hx) {
+void incthx(int nx, int ny, int npml, float *ezi, float *hx) {
     /* incident Hx values */
     for (int i = npml-1; i <= nx-npml; i++) {
         hx[i*ny+(npml-2)] += 0.5 * ezi[npml-1];
@@ -104,7 +105,7 @@ void incthx(int nx, int ny, int npml, double *ezi, double *hx) {
 }
 
 
-void incthy(int nx, int ny, int npml, double *ezi, double *hy) {
+void incthy(int nx, int ny, int npml, float *ezi, float *hy) {
     /* incident Hy values */
     for (int j = npml-1; j <= ny-npml; j++) {
         hy[(npml-2)*ny+j] -= 0.5 * ezi[j];
@@ -116,8 +117,8 @@ void incthy(int nx, int ny, int npml, double *ezi, double *hy) {
 void pmlparam(int nx, int ny, int npml, pmlayer *pml) {
     /* calculate the two-dimensional perfectly matched layer (PML) parameters */
     for (int n = 0; n < npml; n++) {
-        double xm = 0.33*(npml-n)/npml*(npml-n)/npml*(npml-n)/npml;
-        double xn = 0.33*(npml-n-0.5)/npml*(npml-n-0.5)/npml*(npml-n-0.5)/npml;
+        float xm = 0.33*(npml-n)/npml*(npml-n)/npml*(npml-n)/npml;
+        float xn = 0.33*(npml-n-0.5)/npml*(npml-n-0.5)/npml*(npml-n-0.5)/npml;
         pml->fx1[n] = pml->fx1[nx-2-n] = pml->fy1[n] = pml->fy1[ny-2-n] = xn;
         pml->fx2[n] = pml->fx2[nx-2-n] = pml->fy2[n] = pml->fy2[ny-2-n] = 1/(1+xn);
         pml->gx2[n] = pml->gx2[nx-1-n] = pml->gy2[n] = pml->gy2[ny-1-n] = 1/(1+xm);
@@ -129,58 +130,60 @@ void pmlparam(int nx, int ny, int npml, pmlayer *pml) {
 
 int main() {
 
-    int nx = 60;  /* number of grid points */
-    int ny = 60;  /* number of grid points */
+    int nx = 1024;  /* number of grid points */
+    int ny = 1024;  /* number of grid points */
 
-    int ns = 115;  /* number of time steps */
+    int ns = 5000;  /* number of time steps */
 
-    double *ezi = (double*) calloc(ny, sizeof(*ezi));
-    double *hxi = (double*) calloc(ny, sizeof(*hxi));
+    float *ezi = (float*) calloc(ny, sizeof(*ezi));
+    float *hxi = (float*) calloc(ny, sizeof(*hxi));
 
-    double *dz = (double*) calloc(nx*ny, sizeof(*dz));
-    double *ez = (double*) calloc(nx*ny, sizeof(*ez));
-    double *hx = (double*) calloc(nx*ny, sizeof(*hx));
-    double *hy = (double*) calloc(nx*ny, sizeof(*hy));
+    float *dz = (float*) calloc(nx*ny, sizeof(*dz));
+    float *ez = (float*) calloc(nx*ny, sizeof(*ez));
+    float *hx = (float*) calloc(nx*ny, sizeof(*hx));
+    float *hy = (float*) calloc(nx*ny, sizeof(*hy));
 
-    double *ihx = (double*) calloc(nx*ny, sizeof(*ihx));
-    double *ihy = (double*) calloc(nx*ny, sizeof(*ihy));
+    float *ihx = (float*) calloc(nx*ny, sizeof(*ihx));
+    float *ihy = (float*) calloc(nx*ny, sizeof(*ihy));
 
-    double *naz = (double*) calloc(nx*ny, sizeof(*naz));
-    for (int i = 0; i < nx*ny; naz[i] = 1.0, i++);
+    float *naz = (float*) calloc(nx*ny, sizeof(*naz));
+    for (int i = 0; i < nx*ny; naz[i] = 1.0f, i++);
 
-    double bc[4] = {0.0};
+    float bc[4] = {0.0f};
 
     pmlayer pml;
-    pml.fx1 = (double*) calloc(nx, sizeof(*pml.fx1));
-    pml.fx2 = (double*) calloc(nx, sizeof(*pml.fx2));
-    pml.fx3 = (double*) calloc(nx, sizeof(*pml.fx3));
-    pml.fy1 = (double*) calloc(ny, sizeof(*pml.fy1));
-    pml.fy2 = (double*) calloc(ny, sizeof(*pml.fy2));
-    pml.fy3 = (double*) calloc(ny, sizeof(*pml.fy3));
-    pml.gx2 = (double*) calloc(nx, sizeof(*pml.gx2));
-    pml.gx3 = (double*) calloc(nx, sizeof(*pml.gx3));
-    pml.gy2 = (double*) calloc(ny, sizeof(*pml.gy2));
-    pml.gy3 = (double*) calloc(ny, sizeof(*pml.gy3));
+    pml.fx1 = (float*) calloc(nx, sizeof(*pml.fx1));
+    pml.fx2 = (float*) calloc(nx, sizeof(*pml.fx2));
+    pml.fx3 = (float*) calloc(nx, sizeof(*pml.fx3));
+    pml.fy1 = (float*) calloc(ny, sizeof(*pml.fy1));
+    pml.fy2 = (float*) calloc(ny, sizeof(*pml.fy2));
+    pml.fy3 = (float*) calloc(ny, sizeof(*pml.fy3));
+    pml.gx2 = (float*) calloc(nx, sizeof(*pml.gx2));
+    pml.gx3 = (float*) calloc(nx, sizeof(*pml.gx3));
+    pml.gy2 = (float*) calloc(ny, sizeof(*pml.gy2));
+    pml.gy3 = (float*) calloc(ny, sizeof(*pml.gy3));
 
     for (int i = 0; i < nx; i++) {
-        pml.fx2[i] = 1.0;
-        pml.fx3[i] = 1.0;
-        pml.gx2[i] = 1.0;
-        pml.gx3[i] = 1.0;
+        pml.fx2[i] = 1.0f;
+        pml.fx3[i] = 1.0f;
+        pml.gx2[i] = 1.0f;
+        pml.gx3[i] = 1.0f;
     }
 
     for (int i = 0; i < ny; i++) {
-        pml.fy2[i] = 1.0;
-        pml.fy3[i] = 1.0;
-        pml.gy2[i] = 1.0;
-        pml.gy3[i] = 1.0;
+        pml.fy2[i] = 1.0f;
+        pml.fy3[i] = 1.0f;
+        pml.gy2[i] = 1.0f;
+        pml.gy3[i] = 1.0f;
     }
 
     int npml = 8;  /* pml thickness */
     pmlparam(nx, ny, npml, &pml);
 
-    double ds = 0.01;  /* spatial step (m) */
-    double dt = ds/6e8;  /* time step (s) */
+    float ds = 0.01;  /* spatial step (m) */
+    float dt = ds/6e8;  /* time step (s) */
+
+    clock_t stime = clock();
 
     for (int t = 1; t <= ns; t++) {
         ezinct(ny, ezi, hxi, bc);
@@ -192,6 +195,13 @@ int main() {
         incthx(nx, ny, npml, ezi, hx);
         incthy(nx, ny, npml, ezi, hy);
     }
+
+    clock_t ntime = clock();
+    float time = (ntime - stime)*1000/CLOCKS_PER_SEC;
+    printf("Total compute time on CPU: %.3f s\n", time/1000.0f);
+
+    for (int i = 2*ny; i < 2*ny+50; i++)
+        printf("%e\n", ez[i]);
 
     free(pml.fx1);
     free(pml.fx2);
