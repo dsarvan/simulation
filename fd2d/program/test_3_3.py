@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# File: fd2d_3_3.py
+# File: test_3_3.py
 # Name: D.Saravanan
 # Date: 19/01/2022
 
@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d
 from collections import namedtuple
 import numpy as np
+import time
 
 plt.style.use("classic")
 plt.style.use("../pyplot.mplstyle")
@@ -24,7 +25,7 @@ def surfaceplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
     ax.set(xlim=(0, nx), ylim=(0, ny), zlim=(0, 1))
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$", zlabel=r"$E_z\;(V/m)$")
     ax.zaxis.set_rotate_label(False); ax.view_init(elev=20.0, azim=45)
-    plt.savefig("fd2d_surface_3_3.png", dpi=100)
+    plt.show()
 
 
 def contourplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
@@ -36,7 +37,7 @@ def contourplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
     ax.set(xlim=(0, nx-1), ylim=(0, ny-1), aspect="equal")
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$")
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
-    plt.savefig("fd2d_contour_3_3.png", dpi=100)
+    plt.show()
 
 
 pmlayer = namedtuple('pmlayer', (
@@ -124,37 +125,37 @@ def pmlparam(nx: int, ny: int, npml: int, pml: pmlayer) -> None:
 
 def main():
 
-    nx: int = 60  # number of grid points
-    ny: int = 60  # number of grid points
+    nx: int = 1024  # number of grid points
+    ny: int = 1024  # number of grid points
 
-    ns: int = 115  # number of time steps
+    ns: int = 5000  # number of time steps
 
-    ezi = np.zeros(ny, dtype=np.float64)
-    hxi = np.zeros(ny, dtype=np.float64)
+    ezi = np.zeros(ny, dtype=np.float32)
+    hxi = np.zeros(ny, dtype=np.float32)
 
-    dz = np.zeros((nx, ny), dtype=np.float64)
-    ez = np.zeros((nx, ny), dtype=np.float64)
-    hx = np.zeros((nx, ny), dtype=np.float64)
-    hy = np.zeros((nx, ny), dtype=np.float64)
+    dz = np.zeros((nx, ny), dtype=np.float32)
+    ez = np.zeros((nx, ny), dtype=np.float32)
+    hx = np.zeros((nx, ny), dtype=np.float32)
+    hy = np.zeros((nx, ny), dtype=np.float32)
 
-    ihx = np.zeros((nx, ny), dtype=np.float64)
-    ihy = np.zeros((nx, ny), dtype=np.float64)
+    ihx = np.zeros((nx, ny), dtype=np.float32)
+    ihy = np.zeros((nx, ny), dtype=np.float32)
 
-    naz = np.ones((nx, ny), dtype=np.float64)
+    naz = np.ones((nx, ny), dtype=np.float32)
 
-    bc = np.zeros(4, dtype=np.float64)
+    bc = np.zeros(4, dtype=np.float32)
 
     pml = pmlayer(
-        fx1 = np.full(nx, 0.0, dtype=np.float64),
-        fx2 = np.full(nx, 1.0, dtype=np.float64),
-        fx3 = np.full(nx, 1.0, dtype=np.float64),
-        fy1 = np.full(ny, 0.0, dtype=np.float64),
-        fy2 = np.full(ny, 1.0, dtype=np.float64),
-        fy3 = np.full(ny, 1.0, dtype=np.float64),
-        gx2 = np.full(nx, 1.0, dtype=np.float64),
-        gx3 = np.full(nx, 1.0, dtype=np.float64),
-        gy2 = np.full(ny, 1.0, dtype=np.float64),
-        gy3 = np.full(ny, 1.0, dtype=np.float64),
+        fx1 = np.full(nx, 0.0, dtype=np.float32),
+        fx2 = np.full(nx, 1.0, dtype=np.float32),
+        fx3 = np.full(nx, 1.0, dtype=np.float32),
+        fy1 = np.full(ny, 0.0, dtype=np.float32),
+        fy2 = np.full(ny, 1.0, dtype=np.float32),
+        fy3 = np.full(ny, 1.0, dtype=np.float32),
+        gx2 = np.full(nx, 1.0, dtype=np.float32),
+        gx3 = np.full(nx, 1.0, dtype=np.float32),
+        gy2 = np.full(ny, 1.0, dtype=np.float32),
+        gy3 = np.full(ny, 1.0, dtype=np.float32),
     )
 
     npml: int = 8  # pml thickness
@@ -162,6 +163,8 @@ def main():
 
     ds: float = 0.01  # spatial step (m)
     dt: float = ds/6e8  # time step (s)
+
+    stime = time.perf_counter()
 
     for t in np.arange(1, ns+1).astype(np.int32):
         ezinct(ny, ezi, hxi, bc)
@@ -173,6 +176,10 @@ def main():
         incthx(nx, ny, npml, ezi, hx)
         incthy(nx, ny, npml, ezi, hy)
 
+    ntime = time.perf_counter()
+    print(f"Total compute time on CPU: {ntime - stime:.3f} s")
+
+    print(ez[2][0:50])
     surfaceplot(ns, nx, ny, ez)
     contourplot(ns, nx, ny, ez)
 
