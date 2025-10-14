@@ -33,19 +33,7 @@ pmlayer = namedtuple('pmlayer', (
 
 @nb.jit(nopython=True, fastmath=True)
 def gaussian(t: int, t0: int, sigma: float) -> float:
-    return np.exp(-0.5 * ((t - t0)/sigma)**2)
-
-
-def pmlparam(npml: int, nx: int, ny: int, pml: pmlayer) -> None:
-    """ calculate the two-dimensional perfectly matched layer (PML) parameters """
-    for n in range(npml):
-        xm = 0.33 * ((npml-n)/npml)**3
-        xn = 0.33 * ((npml-n-0.5)/npml)**3
-        pml.fx1[n] = pml.fx1[nx-2-n] = pml.fy1[n] = pml.fy1[ny-2-n] = xn
-        pml.fx2[n] = pml.fx2[nx-2-n] = pml.fy2[n] = pml.fy2[ny-2-n] = 1/(1+xn)
-        pml.gx2[n] = pml.gx2[nx-1-n] = pml.gy2[n] = pml.gy2[ny-1-n] = 1/(1+xm)
-        pml.fx3[n] = pml.fx3[nx-2-n] = pml.fy3[n] = pml.fy3[ny-2-n] = (1-xn)/(1+xn)
-        pml.gx3[n] = pml.gx3[nx-1-n] = pml.gy3[n] = pml.gy3[ny-1-n] = (1-xm)/(1+xm)
+    return np.exp(-0.5*((t - t0)/sigma)**2)
 
 
 @nb.jit(nopython=True, parallel=True, fastmath=True)
@@ -65,7 +53,7 @@ def dfield(t: int, nx: int, ny: int, pml: pmlayer, ezi: np.ndarray, dz: np.ndarr
         for j in nb.prange(1, ny):
             dz[i,j] = pml.gx3[i] * pml.gy3[j] * dz[i,j] + pml.gx2[i] * pml.gy2[j] * 0.5 * (hy[i,j] - hy[i-1,j] - hx[i,j] + hx[i,j-1])
     # put a Gaussian pulse at the low end
-    ezi[3] = gaussian(t, 20, 8)
+    ezi[3] = gaussian(t, 20, 8.0)
 
 
 @nb.jit(nopython=True, parallel=True, fastmath=True)
@@ -118,6 +106,18 @@ def incthy(nx: int, ny: int, npml: int, ezi: np.ndarray, hy: np.ndarray) -> None
         hy[nx-npml,j] += 0.5 * ezi[j]
 
 
+def pmlparam(nx: int, ny: int, npml: int, pml: pmlayer) -> None:
+    """ calculate the two-dimensional perfectly matched layer (PML) parameters """
+    for n in range(npml):
+        xm = 0.33*((npml-n)/npml)**3
+        xn = 0.33*((npml-n-0.5)/npml)**3
+        pml.fx1[n] = pml.fx1[nx-2-n] = pml.fy1[n] = pml.fy1[ny-2-n] = xn
+        pml.fx2[n] = pml.fx2[nx-2-n] = pml.fy2[n] = pml.fy2[ny-2-n] = 1/(1+xn)
+        pml.gx2[n] = pml.gx2[nx-1-n] = pml.gy2[n] = pml.gy2[ny-1-n] = 1/(1+xm)
+        pml.fx3[n] = pml.fx3[nx-2-n] = pml.fy3[n] = pml.fy3[ny-2-n] = (1-xn)/(1+xn)
+        pml.gx3[n] = pml.gx3[nx-1-n] = pml.gy3[n] = pml.gy3[ny-1-n] = (1-xm)/(1+xm)
+
+
 def main():
 
     nx: int = 60  # number of grid points
@@ -136,28 +136,28 @@ def main():
     ihx = np.zeros((nx, ny), dtype=np.float64)
     ihy = np.zeros((nx, ny), dtype=np.float64)
 
-    bc = np.zeros(4, dtype=np.float64)
-
     naz = np.ones((nx, ny), dtype=np.float64)
 
-    ds: float = 0.01  # spatial step (m)
-    dt: float = ds/6e8  # time step (s)
+    bc = np.zeros(4, dtype=np.float64)
 
     pml = pmlayer(
-        fx1 = np.zeros(nx, dtype=np.float64),
-        fx2 = np.ones(nx, dtype=np.float64),
-        fx3 = np.ones(nx, dtype=np.float64),
-        fy1 = np.zeros(ny, dtype=np.float64),
-        fy2 = np.ones(ny, dtype=np.float64),
-        fy3 = np.ones(ny, dtype=np.float64),
-        gx2 = np.ones(nx, dtype=np.float64),
-        gx3 = np.ones(nx, dtype=np.float64),
-        gy2 = np.ones(ny, dtype=np.float64),
-        gy3 = np.ones(ny, dtype=np.float64),
+        fx1 = np.full(nx, 0.0, dtype=np.float64),
+        fx2 = np.full(nx, 1.0, dtype=np.float64),
+        fx3 = np.full(nx, 1.0, dtype=np.float64),
+        fy1 = np.full(ny, 0.0, dtype=np.float64),
+        fy2 = np.full(ny, 1.0, dtype=np.float64),
+        fy3 = np.full(ny, 1.0, dtype=np.float64),
+        gx2 = np.full(nx, 1.0, dtype=np.float64),
+        gx3 = np.full(nx, 1.0, dtype=np.float64),
+        gy2 = np.full(ny, 1.0, dtype=np.float64),
+        gy3 = np.full(ny, 1.0, dtype=np.float64),
     )
 
     npml: int = 8  # pml thickness
-    pmlparam(npml, nx, ny, pml)
+    pmlparam(nx, ny, npml, pml)
+
+    ds: float = 0.01  # spatial step (m)
+    dt: float = ds/6e8  # time step (s)
 
     ezdata = [ez]
     for t in np.arange(1, ns+1).astype(np.int32):
@@ -179,10 +179,10 @@ def main():
     writer = fwriter(fps=15, codec='h264', bitrate=2000, metadata=data)
 
     # draw an empty plot, but preset the plot x-, y- and z- limits
-    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    fig, ax = plt.subplots(subplot_kw={"projection":"3d"})
     fig.suptitle(r"FDTD simulation of a plane wave in free space with PML")
-    xv, yv = np.meshgrid(np.arange(ny), np.arange(nx))
-    ax.plot_surface(yv, xv, ez[0], rstride=1, cstride=1, cmap="gray", lw=0.25)
+    yv, xv = np.meshgrid(range(ny), range(nx))
+    ax.plot_surface(xv, yv, ez[0], rstride=1, cstride=1, cmap="gray", lw=0.25)
     ax.text2D(0.1, 0.7, "", transform=ax.transAxes)
     ax.set(xlim=(0, nx), ylim=(0, ny), zlim=(0, 1))
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$", zlabel=r"$E_z\;(V/m)$")
@@ -192,7 +192,7 @@ def main():
     with writer.saving(fig, "fd2d_surface_3_3.mp4", 300):
         for t in np.arange(1, ns+1).astype(np.int32):
             ax.clear()
-            ax.plot_surface(yv, xv, ez[t], rstride=1, cstride=1, cmap="gray", lw=0.25)
+            ax.plot_surface(xv, yv, ez[t], rstride=1, cstride=1, cmap="gray", lw=0.25)
             ax.text2D(0.1, 0.7, rf"$T$ = {t}", transform=ax.transAxes)
             ax.set(xlim=(0, nx), ylim=(0, ny), zlim=(0, 1))
             ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$", zlabel=r"$E_z\;(V/m)$")
@@ -201,11 +201,11 @@ def main():
     plt.close(fig)
 
     # draw an empty plot, but preset the plot x-, y- and z- limits
-    fig, ax = plt.subplots(gridspec_kw={"hspace": 0.2})
+    fig, ax = plt.subplots(gridspec_kw={"hspace":0.2})
     fig.suptitle(r"FDTD simulation of a plane wave in free space with PML")
-    xv, yv = np.meshgrid(np.arange(ny), np.arange(nx))
-    ax.contourf(yv, xv, ez[0], cmap="gray", alpha=0.75)
-    ax.contour(yv, xv, ez[0], colors="k", linewidths=0.25)
+    yv, xv = np.meshgrid(range(ny), range(nx))
+    ax.contourf(xv, yv, ez[0], cmap="gray", alpha=0.75)
+    ax.contour(xv, yv, ez[0], colors="k", linewidths=0.25)
     ax.set(xlim=(0, nx-1), ylim=(0, ny-1), aspect="equal")
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$")
     plt.subplots_adjust(bottom=0.1, hspace=0.45)
@@ -213,8 +213,8 @@ def main():
     with writer.saving(fig, "fd2d_contour_3_3.mp4", 300):
         for t in np.arange(1, ns+1).astype(np.int32):
             ax.clear()
-            ax.contourf(yv, xv, ez[t], cmap="gray", alpha=0.75)
-            ax.contour(yv, xv, ez[t], colors="k", linewidths=0.25)
+            ax.contourf(xv, yv, ez[t], cmap="gray", alpha=0.75)
+            ax.contour(xv, yv, ez[t], colors="k", linewidths=0.25)
             ax.set(xlim=(0, nx-1), ylim=(0, ny-1), aspect="equal")
             ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$")
             writer.grab_frame()
