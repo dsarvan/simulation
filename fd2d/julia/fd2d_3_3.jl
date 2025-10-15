@@ -7,19 +7,18 @@
 magnetic (TM) mode with the two-dimensional perfectly matched layer (PML) """
 
 import PyPlot as plt
-using Base.Threads
 using LoopVectorization
 
 plt.matplotlib.style.use("classic")
 plt.matplotlib.style.use("../pyplot.mplstyle")
-meshgrid(xs, ys) = xs .* ones(length(ys))', ones(length(xs)) .* ys'
+meshgrid(xs, ys) = xs'.+ 0 .*ys, ys.+ 0 .*xs'
 
 
 function surfaceplot(ns::Int, nx::Int, ny::Int, ez::Array{Float64})::Nothing
-    fig, ax = plt.subplots(subplot_kw=Dict("projection" => "3d"))
+    fig, ax = plt.subplots(subplot_kw=Dict("projection"=>"3d"))
     fig.suptitle(raw"FDTD simulation of a plane wave in free space with PML")
-    xv, yv = meshgrid(0:ny-1, 0:nx-1)
-    ax.plot_surface(yv, xv, ez', rstride=1, cstride=1, cmap="gray", lw=0.25)
+    yv, xv = meshgrid(0:ny-1, 0:nx-1)
+    ax.plot_surface(xv, yv, ez, rstride=1, cstride=1, cmap="gray", lw=0.25)
     ax.text2D(0.1, 0.7, raw"$T$ = "*"$ns", transform=ax.transAxes)
     ax.set(xlim=(0, nx), ylim=(0, ny), zlim=(0, 1))
     ax.set(xlabel=raw"$x\;(cm)$", ylabel=raw"$y\;(cm)$", zlabel=raw"$E_z\;(V/m)$")
@@ -29,11 +28,11 @@ end
 
 
 function contourplot(ns::Int, nx::Int, ny::Int, ez::Array{Float64})::Nothing
-    fig, ax = plt.subplots(figsize=(4,4), gridspec_kw=Dict("hspace" => 0.2))
+    fig, ax = plt.subplots(figsize=(4,4), gridspec_kw=Dict("hspace"=>0.2))
     fig.suptitle(raw"FDTD simulation of a plane wave in free space with PML")
-    xv, yv = meshgrid(0:ny-1, 0:nx-1)
-    ax.contourf(yv, xv, ez', cmap="gray", alpha=0.75)
-    ax.contour(yv, xv, ez', colors="k", linewidths=0.25)
+    yv, xv = meshgrid(0:ny-1, 0:nx-1)
+    ax.contourf(xv, yv, ez, cmap="gray", alpha=0.75)
+    ax.contour(xv, yv, ez, colors="k", linewidths=0.25)
     ax.set(xlim=(0, nx-1), ylim=(0, ny-1), aspect="equal")
     ax.set(xlabel=raw"$x\;(cm)$", ylabel=raw"$y\;(cm)$")
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
@@ -56,27 +55,13 @@ end
 
 
 function gaussian(t::Int32, t0::Int, sigma::Float64)::Float64
-    return exp(-0.5 * ((t - t0)/sigma)^2)
-end
-
-
-function pmlparam(npml::Int, nx::Int, ny::Int, pml::pmlayer)
-    """ calculate the two-dimensional perfectly matched layer (PML) parameters """
-    for n in (1:npml)
-        xm = 0.33 * ((npml-n+1)/npml)^3
-        xn = 0.33 * ((npml-n+1-0.5)/npml)^3
-        pml.fx1[n] = pml.fx1[nx-n] = pml.fy1[n] = pml.fy1[ny-n] = xn
-        pml.fx2[n] = pml.fx2[nx-n] = pml.fy2[n] = pml.fy2[ny-n] = 1/(1+xn)
-        pml.gx2[n] = pml.gx2[nx+1-n] = pml.gy2[n] = pml.gy2[ny+1-n] = 1/(1+xm)
-        pml.fx3[n] = pml.fx3[nx-n] = pml.fy3[n] = pml.fy3[ny-n] = (1-xn)/(1+xn)
-        pml.gx3[n] = pml.gx3[nx+1-n] = pml.gy3[n] = pml.gy3[ny+1-n] = (1-xm)/(1+xm)
-    end
+    return exp(-0.5*((t - t0)/sigma)^2)
 end
 
 
 function ezinct(ny::Int, ezi::Array{Float64}, hxi::Array{Float64}, bc::Array{Float64})
     """ calculate the incident Ez """
-    @threads for j in 2:ny
+    @tturbo for j in 2:ny
         ezi[j] += 0.5 * (hxi[j-1] - hxi[j])
     end
     # absorbing boundary conditions
@@ -87,8 +72,8 @@ end
 
 function dfield(t::Int32, nx::Int, ny::Int, pml::pmlayer, ezi::Array{Float64}, dz::Array{Float64}, hx::Array{Float64}, hy::Array{Float64})
     """ calculate the electric flux density Dz """
-    @threads for j in 2:ny
-        @turbo for i in 2:nx
+    @tturbo for j in 2:ny
+        for i in 2:nx
             dz[i,j] = pml.gx3[i] * pml.gy3[j] * dz[i,j] + pml.gx2[i] * pml.gy2[j] * 0.5 * (hy[i,j] - hy[i-1,j] - hx[i,j] + hx[i,j-1])
         end
     end
@@ -99,7 +84,7 @@ end
 
 function inctdz(nx::Int, ny::Int, npml::Int, hxi::Array{Float64}, dz::Array{Float64})
     """ incident Dz values """
-    @threads for i in npml:nx-npml+1
+    @tturbo for i in npml:nx-npml+1
         dz[i,npml] += 0.5 * hxi[npml-1]
         dz[i,ny-npml+1] -= 0.5 * hxi[ny-npml+1]
     end
@@ -108,8 +93,8 @@ end
 
 function efield(nx::Int, ny::Int, naz::Array{Float64}, dz::Array{Float64}, ez::Array{Float64})
     """ calculate the Ez field from Dz """
-    @threads for j in 1:ny
-        @turbo for i in 1:nx
+    @tturbo for j in 1:ny
+        for i in 1:nx
             ez[i,j] = naz[i,j] * dz[i,j]
         end
     end
@@ -118,7 +103,7 @@ end
 
 function hxinct(ny::Int, ezi::Array{Float64}, hxi::Array{Float64})
     """ calculate the incident Hx """
-    @threads for j in 1:ny-1
+    @tturbo for j in 1:ny-1
         hxi[j] += 0.5 * (ezi[j] - ezi[j+1])
     end
 end
@@ -126,8 +111,8 @@ end
 
 function hfield(nx::Int, ny::Int, pml::pmlayer, ez::Array{Float64}, ihx::Array{Float64}, ihy::Array{Float64}, hx::Array{Float64}, hy::Array{Float64})
     """ calculate the Hx and Hy field """
-    @threads for j in 1:ny-1
-        @turbo for i in 1:nx-1
+    @tturbo for j in 1:ny-1
+        for i in 1:nx-1
             ihx[i,j] += ez[i,j] - ez[i,j+1]
             ihy[i,j] += ez[i,j] - ez[i+1,j]
             hx[i,j] = pml.fy3[j] * hx[i,j] + pml.fy2[j] * (0.5 * ez[i,j] - 0.5 * ez[i,j+1] + pml.fx1[i] * ihx[i,j])
@@ -139,7 +124,7 @@ end
 
 function incthx(nx::Int, ny::Int, npml::Int, ezi::Array{Float64}, hx::Array{Float64})
     """ incident Hx values """
-    @threads for i in npml:nx-npml+1
+    @tturbo for i in npml:nx-npml+1
         hx[i,npml-1] += 0.5 * ezi[npml]
         hx[i,ny-npml+1] -= 0.5 * ezi[ny-npml+1]
     end
@@ -148,9 +133,23 @@ end
 
 function incthy(nx::Int, ny::Int, npml::Int, ezi::Array{Float64}, hy::Array{Float64})
     """ incident Hy values """
-    @threads for j in npml:ny-npml+1
+    @tturbo for j in npml:ny-npml+1
         hy[npml-1,j] -= 0.5 * ezi[j]
         hy[nx-npml+1,j] += 0.5 * ezi[j]
+    end
+end
+
+
+function pmlparam(nx::Int, ny::Int, npml::Int, pml::pmlayer)::Nothing
+    """ calculate the two-dimensional perfectly matched layer (PML) parameters """
+    for n in 1:npml
+        xm = 0.33*((npml-n+1)/npml)^3
+        xn = 0.33*((npml-n+0.5)/npml)^3
+        pml.fx1[n] = pml.fx1[nx-n] = pml.fy1[n] = pml.fy1[ny-n] = xn
+        pml.fx2[n] = pml.fx2[nx-n] = pml.fy2[n] = pml.fy2[ny-n] = 1/(1+xn)
+        pml.gx2[n] = pml.gx2[nx+1-n] = pml.gy2[n] = pml.gy2[ny+1-n] = 1/(1+xm)
+        pml.fx3[n] = pml.fx3[nx-n] = pml.fy3[n] = pml.fy3[ny-n] = (1-xn)/(1+xn)
+        pml.gx3[n] = pml.gx3[nx+1-n] = pml.gy3[n] = pml.gy3[ny+1-n] = (1-xm)/(1+xm)
     end
 end
 
@@ -173,28 +172,28 @@ function main()
     ihx = zeros(Float64, (nx, ny))
     ihy = zeros(Float64, (nx, ny))
 
-    bc = zeros(Float64, 4)
-
     naz = ones(Float64, (nx, ny))
 
-    ds::Float64 = 0.01  # spatial step (m)
-    dt::Float64 = ds/6e8  # time step (s)
+    bc = zeros(Float64, 4)
 
     pml = pmlayer(
-        zeros(Float64, nx),
-        ones(Float64, nx),
-        ones(Float64, nx),
-        zeros(Float64, ny),
-        ones(Float64, ny),
-        ones(Float64, ny),
-        ones(Float64, nx),
-        ones(Float64, nx),
-        ones(Float64, ny),
-        ones(Float64, ny),
+        fill(0.0::Float64, nx),
+        fill(1.0::Float64, nx),
+        fill(1.0::Float64, nx),
+        fill(0.0::Float64, ny),
+        fill(1.0::Float64, ny),
+        fill(1.0::Float64, ny),
+        fill(1.0::Float64, nx),
+        fill(1.0::Float64, nx),
+        fill(1.0::Float64, ny),
+        fill(1.0::Float64, ny),
     )
 
     npml::Int = 8  # pml thickness
-    pmlparam(npml, nx, ny, pml)
+    pmlparam(nx, ny, npml, pml)
+
+    ds::Float64 = 0.01  # spatial step (m)
+    dt::Float64 = ds/6e8  # time step (s)
 
     for t in Int32.(1:ns)
         ezinct(ny, ezi, hxi, bc)
