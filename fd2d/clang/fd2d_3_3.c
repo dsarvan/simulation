@@ -26,21 +26,7 @@ typedef struct {
 
 
 double gaussian(int t, int t0, double sigma) {
-    return exp(-0.5 * ((t - t0)/sigma) * ((t - t0)/sigma));
-}
-
-
-void pmlparam(int npml, int nx, int ny, pmlayer *pml) {
-    /* calculate the two-dimensional perfectly matched layer (PML) parameters */
-    for (int n = 0; n < npml; n++) {
-        double xm = 0.33 * (npml-n)/npml*(npml-n)/npml*(npml-n)/npml;
-        double xn = 0.33 * (npml-n-0.5)/npml*(npml-n-0.5)/npml*(npml-n-0.5)/npml;
-        pml->fx1[n] = pml->fx1[nx-2-n] = pml->fy1[n] = pml->fy1[ny-2-n] = xn;
-        pml->fx2[n] = pml->fx2[nx-2-n] = pml->fy2[n] = pml->fy2[ny-2-n] = 1/(1+xn);
-        pml->gx2[n] = pml->gx2[nx-1-n] = pml->gy2[n] = pml->gy2[ny-1-n] = 1/(1+xm);
-        pml->fx3[n] = pml->fx3[nx-2-n] = pml->fy3[n] = pml->fy3[ny-2-n] = (1-xn)/(1+xn);
-        pml->gx3[n] = pml->gx3[nx-1-n] = pml->gy3[n] = pml->gy3[ny-1-n] = (1-xm)/(1+xm);
-    }
+    return exp(-0.5*(t - t0)/sigma*(t - t0)/sigma);
 }
 
 
@@ -66,7 +52,7 @@ void dfield(int t, int nx, int ny, pmlayer *pml, double *ezi, double *dz, double
         }
     }
     /* put a Gaussian pulse at the low end */
-    ezi[3] = gaussian(t, 20, 8);
+    ezi[3] = gaussian(t, 20, 8.0);
 }
 
 
@@ -136,6 +122,20 @@ void incthy(int nx, int ny, int npml, double *ezi, double *hy) {
 }
 
 
+void pmlparam(int nx, int ny, int npml, pmlayer *pml) {
+    /* calculate the two-dimensional perfectly matched layer (PML) parameters */
+    for (int n = 0; n < npml; n++) {
+        double xm = 0.33*(npml-n)/npml*(npml-n)/npml*(npml-n)/npml;
+        double xn = 0.33*(npml-n-0.5)/npml*(npml-n-0.5)/npml*(npml-n-0.5)/npml;
+        pml->fx1[n] = pml->fx1[nx-2-n] = pml->fy1[n] = pml->fy1[ny-2-n] = xn;
+        pml->fx2[n] = pml->fx2[nx-2-n] = pml->fy2[n] = pml->fy2[ny-2-n] = 1/(1+xn);
+        pml->gx2[n] = pml->gx2[nx-1-n] = pml->gy2[n] = pml->gy2[ny-1-n] = 1/(1+xm);
+        pml->fx3[n] = pml->fx3[nx-2-n] = pml->fy3[n] = pml->fy3[ny-2-n] = (1-xn)/(1+xn);
+        pml->gx3[n] = pml->gx3[nx-1-n] = pml->gy3[n] = pml->gy3[ny-1-n] = (1-xm)/(1+xm);
+    }
+}
+
+
 int main() {
 
     int nx = 60;  /* number of grid points */
@@ -143,36 +143,33 @@ int main() {
 
     int ns = 115;  /* number of time steps */
 
-    double *ezi = (double *) calloc(ny, sizeof(*ezi));
-    double *hxi = (double *) calloc(ny, sizeof(*hxi));
+    double *ezi = (double*) calloc(ny, sizeof(*ezi));
+    double *hxi = (double*) calloc(ny, sizeof(*hxi));
 
-    double *dz = (double *) calloc(nx*ny, sizeof(*dz));
-    double *ez = (double *) calloc(nx*ny, sizeof(*ez));
-    double *hx = (double *) calloc(nx*ny, sizeof(*hx));
-    double *hy = (double *) calloc(nx*ny, sizeof(*hy));
+    double *dz = (double*) calloc(nx*ny, sizeof(*dz));
+    double *ez = (double*) calloc(nx*ny, sizeof(*ez));
+    double *hx = (double*) calloc(nx*ny, sizeof(*hx));
+    double *hy = (double*) calloc(nx*ny, sizeof(*hy));
 
-    double *ihx = (double *) calloc(nx*ny, sizeof(*ihx));
-    double *ihy = (double *) calloc(nx*ny, sizeof(*ihy));
+    double *ihx = (double*) calloc(nx*ny, sizeof(*ihx));
+    double *ihy = (double*) calloc(nx*ny, sizeof(*ihy));
+
+    double *naz = (double*) calloc(nx*ny, sizeof(*naz));
+    for (int i = 0; i < nx*ny; naz[i] = 1.0, i++);
 
     double bc[4] = {0.0};
 
-    double *naz = (double *) calloc(nx*ny, sizeof(*naz));
-    for (int i = 0; i < nx*ny; naz[i] = 1.0, i++);
-
-    double ds = 0.01;  /* spatial step (m) */
-    double dt = ds/6e8;  /* time step (s) */
-
     pmlayer pml;
-    pml.fx1 = (double *) calloc(nx, sizeof(*pml.fx1));
-    pml.fx2 = (double *) calloc(nx, sizeof(*pml.fx2));
-    pml.fx3 = (double *) calloc(nx, sizeof(*pml.fx3));
-    pml.fy1 = (double *) calloc(ny, sizeof(*pml.fy1));
-    pml.fy2 = (double *) calloc(ny, sizeof(*pml.fy2));
-    pml.fy3 = (double *) calloc(ny, sizeof(*pml.fy3));
-    pml.gx2 = (double *) calloc(nx, sizeof(*pml.gx2));
-    pml.gx3 = (double *) calloc(nx, sizeof(*pml.gx3));
-    pml.gy2 = (double *) calloc(ny, sizeof(*pml.gy2));
-    pml.gy3 = (double *) calloc(ny, sizeof(*pml.gy3));
+    pml.fx1 = (double*) calloc(nx, sizeof(*pml.fx1));
+    pml.fx2 = (double*) calloc(nx, sizeof(*pml.fx2));
+    pml.fx3 = (double*) calloc(nx, sizeof(*pml.fx3));
+    pml.fy1 = (double*) calloc(ny, sizeof(*pml.fy1));
+    pml.fy2 = (double*) calloc(ny, sizeof(*pml.fy2));
+    pml.fy3 = (double*) calloc(ny, sizeof(*pml.fy3));
+    pml.gx2 = (double*) calloc(nx, sizeof(*pml.gx2));
+    pml.gx3 = (double*) calloc(nx, sizeof(*pml.gx3));
+    pml.gy2 = (double*) calloc(ny, sizeof(*pml.gy2));
+    pml.gy3 = (double*) calloc(ny, sizeof(*pml.gy3));
 
     for (int i = 0; i < nx; i++) {
         pml.fx2[i] = 1.0;
@@ -189,7 +186,10 @@ int main() {
     }
 
     int npml = 8;  /* pml thickness */
-    pmlparam(npml, nx, ny, &pml);
+    pmlparam(nx, ny, npml, &pml);
+
+    double ds = 0.01;  /* spatial step (m) */
+    double dt = ds/6e8;  /* time step (s) */
 
     for (int t = 1; t <= ns; t++) {
         ezinct(ny, ezi, hxi, bc);
