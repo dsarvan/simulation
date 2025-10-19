@@ -33,9 +33,9 @@ def main():
     # draw an empty plot, but preset the plot x- and y- limits
     fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
     fig.suptitle(r"FDTD simulation of a pulse in free space")
-    axline, = ax.plot(ex, color="black", linewidth=1)
+    axline, = ax.plot(range(nx), ex, color="k", linewidth=1.0)
     ax.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
-    ax.set(xticks=range(0, nx+1, round(nx//10,-1)))
+    ax.set(xticks=range(0, nx+1, int(np.ceil(nx/500)*25)))
     ax.set(xlabel=r"$z\;(cm)$", ylabel=r"$E_x\;(V/m)$")
     axtime = ax.text(0.02, 0.90, "", transform=ax.transAxes)
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
