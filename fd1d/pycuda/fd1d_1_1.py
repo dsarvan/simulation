@@ -20,9 +20,9 @@ plt.style.use("../pyplot.mplstyle")
 def visualize(ns: int, nx: int, ex: np.ndarray) -> None:
     fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
     fig.suptitle(r"FDTD simulation of a pulse in free space")
-    ax.plot(ex, color="black", linewidth=1)
+    ax.plot(range(nx), ex, color="k", linewidth=1.0)
     ax.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
-    ax.set(xticks=range(0, nx+1, round(nx//10,-1)))
+    ax.set(xticks=range(0, nx+1, int(np.ceil(nx/500)*25)))
     ax.set(xlabel=r"$z\;(cm)$", ylabel=r"$E_x\;(V/m)$")
     ax.text(0.02, 0.90, rf"$T$ = {ns}", transform=ax.transAxes)
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
@@ -36,7 +36,7 @@ kernel = """
 
 __device__
 float gaussian(int t, int t0, float sigma) {
-    return exp(-0.5*(t - t0)/sigma*(t - t0)/sigma);
+    return expf(-0.5f*(t - t0)/sigma*(t - t0)/sigma);
 }
 
 
@@ -44,7 +44,7 @@ __global__
 void exfield(int t, int nx, float *ex, float *hy) {
     /* calculate the Ex field */
     for (int i = idx+1; i < nx; i += stx)
-        ex[i] += 0.5 * (hy[i-1] - hy[i]);
+        ex[i] += 0.5f * (hy[i-1] - hy[i]);
     /* put a Gaussian pulse in the middle */
     if (idx == nx/2) ex[nx/2] = gaussian(t, 40, 12.0f);
 }
@@ -54,7 +54,7 @@ __global__
 void hyfield(int nx, float *ex, float *hy) {
     /* calculate the Hy field */
     for (int i = idx; i < nx-1; i += stx)
-        hy[i] += 0.5 * (ex[i] - ex[i+1]);
+        hy[i] += 0.5f * (ex[i] - ex[i+1]);
 }
 """
 
