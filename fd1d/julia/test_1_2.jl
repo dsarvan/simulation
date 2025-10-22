@@ -14,14 +14,14 @@ plt.matplotlib.style.use("../pyplot.mplstyle")
 
 function visualize(ns::Int, nx::Int, ex::Array{Float32})::Nothing
     fig, ax = plt.subplots(figsize=(8,3), gridspec_kw=Dict("hspace"=>0.2))
-    fig.suptitle(raw"FDTD simulation of a pulse with absorbing boundary conditions")
-    ax.plot(ex, color="black", linewidth=1)
+    fig.suptitle("FDTD simulation of a pulse with absorbing boundary conditions")
+    ax.plot(0:nx-1, ex, color="k", linewidth=1.0)
     ax.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
-    ax.set(xticks=0:round(Int, div(nx,10)/10)*10:nx)
-    ax.set(xlabel=raw"$z\;(cm)$", ylabel=raw"$E_x\;(V/m)$")
-    ax.text(0.02, 0.90, raw"$T$ = "*"$ns", transform=ax.transAxes)
+    ax.set(xticks=0:Int(ceil(nx/500)*50):nx)
+    ax.set(xlabel="\$z\\;(cm)\$", ylabel="\$E_x\\;(V/m)\$")
+    ax.text(0.02, 0.90, "\$T\$ = $ns", transform=ax.transAxes)
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
-    plt.show()
+    plt.savefig("test_1_2.png", dpi=100)
 end
 
 
@@ -46,7 +46,7 @@ function main()
         # calculate the Ex field
         @views ex[2:nx] .+= 0.5 .* (hy[1:nx-1] .- hy[2:nx])
         # put a Gaussian pulse in the middle
-        ex[div(nx,2)+1] = gaussian(t, 40, 12.f0)
+        ex[nx÷2+1] = gaussian(t, 40, 12.f0)
         # absorbing boundary conditions
         ex[1], bc[1], bc[2] = bc[1], bc[2], ex[2]
         ex[nx], bc[4], bc[3] = bc[4], bc[3], ex[nx-1]
