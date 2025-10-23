@@ -13,16 +13,15 @@ plt.matplotlib.style.use("../pyplot.mplstyle")
 
 function visualize(ns::Int, nx::Int, epsr::Float64, cb::Array{Float64}, ex::Array{Float64})::Nothing
     fig, ax = plt.subplots(figsize=(8,3), gridspec_kw=Dict("hspace"=>0.2))
-    fig.suptitle(raw"FDTD simulation of a pulse striking dielectric material")
-    medium = epsr > 1 ? (div.(0.5,cb).-1)/(epsr-1)*1e3 : div.(0.5,cb).-1
-    medium[medium.==0] .= -1e3
-    ax.plot(ex, color="black", linewidth=1)
-    ax.fill_between(0:nx-1, medium, medium[1], color="y", alpha=0.3)
+    fig.suptitle("FDTD simulation of a pulse striking dielectric material")
+    medium = epsr > 1 ? findall(x->x!=0,0.5./cb.-1) : 0.5./cb.-1
+    ax.plot(0:nx-1, ex, color="k", linewidth=1.0)
+    ax.axvspan(medium[1], medium[end], color="y", alpha=0.3)
     ax.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
-    ax.set(xticks=0:round(Int, div(nx,10)/10)*10:nx)
-    ax.set(xlabel=raw"$z\;(cm)$", ylabel=raw"$E_x\;(V/m)$")
-    ax.text(0.02, 0.90, raw"$T$ = "*"$ns", transform=ax.transAxes)
-    ax.text(0.90, 0.90, raw"$\epsilon_r$ = "*"$epsr", transform=ax.transAxes)
+    ax.set(xticks=0:Int(ceil(nx/500)*25):nx)
+    ax.set(xlabel="\$z\\;(cm)\$", ylabel="\$E_x\\;(V/m)\$")
+    ax.text(0.02, 0.90, "\$T\$ = $ns", transform=ax.transAxes)
+    ax.text(0.90, 0.90, "\$\\epsilon_r\$ = $epsr", transform=ax.transAxes)
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
     plt.savefig("fd1d_1_3.png", dpi=100)
 end
@@ -35,7 +34,7 @@ end
 
 function dielectric(nx::Int, epsr::Float64)::Array{Float64}
     cb = 0.5 .+ zeros(Float64, nx)
-    cb[div(nx,2)+1:nx] .= 0.5/epsr
+    cb[nx÷2+1:nx] .= 0.5/epsr
     return cb
 end
 
