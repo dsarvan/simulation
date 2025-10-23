@@ -44,12 +44,11 @@ def main():
     # draw an empty plot, but preset the plot x- and y- limits
     fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
     fig.suptitle(r"FDTD simulation of a pulse striking dielectric material")
-    medium = (0.5/cb-1)/(epsr-1)*1e3 if epsr > 1 else (0.5/cb-1)
-    medium[medium==0] = -1e3
-    axline, = ax.plot(ex, color="black", linewidth=1)
-    ax.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
+    medium = np.where(0.5/cb-1)[0] if epsr > 1 else (0.5/cb-1)
+    axline, = ax.plot(range(nx), ex, color="k", linewidth=1.0)
+    ax.axvspan(medium[0], medium[-1], color="y", alpha=0.3)
     ax.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
-    ax.set(xticks=range(0, nx+1, round(nx//10,-1)))
+    ax.set(xticks=range(0, nx+1, int(np.ceil(nx/500)*25)))
     ax.set(xlabel=r"$z\;(cm)$", ylabel=r"$E_x\;(V/m)$")
     axtime = ax.text(0.02, 0.90, "", transform=ax.transAxes)
     axepsr = ax.text(0.90, 0.90, "", transform=ax.transAxes)
