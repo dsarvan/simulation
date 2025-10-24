@@ -11,7 +11,7 @@
 
 
 float gaussian(int t, int t0, float sigma) {
-    return exp(-0.5*(t - t0)/sigma*(t - t0)/sigma);
+    return expf(-0.5f*(t - t0)/sigma*(t - t0)/sigma);
 }
 
 
@@ -30,14 +30,14 @@ void hyfield(int nx, float *ex, float *hy, float *bc) {
     ex[nx-1] = bc[3], bc[3] = bc[2], bc[2] = ex[nx-2];
     /* calculate the Hy field */
     for (int i = 0; i < nx-1; i++)
-        hy[i] += 0.5 * (ex[i] - ex[i+1]);
+        hy[i] += 0.5f * (ex[i] - ex[i+1]);
 }
 
 
 float *dielectric(int nx, float epsr) {
     float *cb = (float*) calloc(nx, sizeof(*cb));
     for (int i = 0; i < nx; cb[i] = 0.5f, i++);
-    for (int i = nx/2; i < nx; cb[i] = 0.5/epsr, i++);
+    for (int i = nx/2; i < nx; cb[i] = 0.5f/epsr, i++);
     return cb;
 }
 
