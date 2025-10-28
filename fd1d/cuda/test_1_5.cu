@@ -22,8 +22,8 @@ typedef struct {
 
 __device__
 float sinusoidal(int t, float ds, float freq) {
-    float dt = ds/6e8;  /* time step (s) */
-    return sin(2*M_PI*freq*dt*t);
+    float dt = ds/6e8f;  /* time step (s) */
+    return sinf(2*M_PI*freq*dt*t);
 }
 
 
@@ -33,7 +33,7 @@ void exfield(int t, int nx, float *ca, float *cb, float *ex, float *hy) {
     for (int i = idx+1; i < nx; i += stx)
         ex[i] = ca[i] * ex[i] + cb[i] * (hy[i-1] - hy[i]);
     /* put a sinusoidal wave at the low end */
-    if (idx == 1) ex[1] += sinusoidal(t, 0.01f, 700e6);
+    if (idx == 1) ex[1] += sinusoidal(t, 0.01f, 700e6f);
 }
 
 
@@ -44,7 +44,7 @@ void hyfield(int nx, float *ex, float *hy, float *bc) {
     if (idx == nx-1) ex[nx-1] = bc[3], bc[3] = bc[2], bc[2] = ex[nx-2];
     /* calculate the Hy field */
     for (int i = idx; i < nx-1; i += stx)
-        hy[i] += 0.5 * (ex[i] - ex[i+1]);
+        hy[i] += 0.5f * (ex[i] - ex[i+1]);
 }
 
 
@@ -54,10 +54,10 @@ tuple dielectric(int nx, float dt, float epsr, float sigma) {
     cudaMallocManaged(&n.cb, nx*sizeof(*n.cb));
     for (int i = 0; i < nx; n.ca[i] = 1.0f, i++);
     for (int i = 0; i < nx; n.cb[i] = 0.5f, i++);
-    float eps0 = 8.854e-12;  /* vacuum permittivity (F/m) */
+    float eps0 = 8.854e-12f;  /* vacuum permittivity (F/m) */
     float epsf = dt*sigma/(2*eps0*epsr);
     for (int i = nx/2; i < nx; n.ca[i] = (1 - epsf)/(1 + epsf), i++);
-    for (int i = nx/2; i < nx; n.cb[i] = 0.5/(epsr*(1 + epsf)), i++);
+    for (int i = nx/2; i < nx; n.cb[i] = 0.5f/(epsr*(1 + epsf)), i++);
     return n;
 }
 
@@ -82,10 +82,10 @@ int main() {
     cudaMallocManaged(&bc, 4*sizeof(*bc));
     for (int i = 0; i < 4; bc[i] = 0.0f, i++);
 
-    float ds = 0.01;  /* spatial step (m) */
-    float dt = ds/6e8;  /* time step (s) */
-    float epsr = 4.0;  /* relative permittivity */
-    float sigma = 0.04;  /* conductivity (S/m) */
+    float ds = 0.01f;  /* spatial step (m) */
+    float dt = ds/6e8f;  /* time step (s) */
+    float epsr = 4.0f;  /* relative permittivity */
+    float sigma = 0.04f;  /* conductivity (S/m) */
     tuple n = dielectric(nx, dt, epsr, sigma);
 
     int numSM;
