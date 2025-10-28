@@ -21,18 +21,17 @@ plt.style.use("../pyplot.mplstyle")
 def visualize(ns: int, nx: int, epsr: float, sigma: float, cb: np.ndarray, ex: np.ndarray) -> None:
     fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
     fig.suptitle(r"FDTD simulation of a sinusoidal striking lossy dielectric material")
-    medium = (0.5/cb-1)/(epsr-1)*1e3 if epsr > 1 else (0.5/cb-1)
-    medium[medium==0] = -1e3
-    ax.plot(ex, color="black", linewidth=1)
-    ax.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
+    medium = np.where(0.5/cb-1)[0] if epsr > 1 else (0.5/cb-1)
+    ax.plot(range(nx), ex, color="k", linewidth=1.0)
+    ax.axvspan(medium[0], medium[-1], color="y", alpha=0.3)
     ax.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
-    ax.set(xticks=range(0, nx+1, round(nx//10,-1)))
+    ax.set(xticks=range(0, nx+1, int(np.ceil(nx/500)*50)))
     ax.set(xlabel=r"$z\;(cm)$", ylabel=r"$E_x\;(V/m)$")
     ax.text(0.02, 0.90, rf"$T$ = {ns}", transform=ax.transAxes)
     ax.text(0.90, 0.90, rf"$\epsilon_r$ = {epsr}", transform=ax.transAxes)
     ax.text(0.85, 0.80, rf"$\sigma$ = {sigma} $S/m$", transform=ax.transAxes)
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
-    plt.show()
+    plt.savefig("test_1_5.png", dpi=100)
 
 
 kernel = """
@@ -42,8 +41,8 @@ kernel = """
 
 __device__
 float sinusoidal(int t, float ds, float freq) {
-    float dt = ds/6e8;  /* time step (s) */
-    return sin(2*M_PI*freq*dt*t);
+    float dt = ds/6e8f;  /* time step (s) */
+    return sinf(2*M_PI*freq*dt*t);
 }
 
 
@@ -53,7 +52,7 @@ void exfield(int t, int nx, float *ca, float *cb, float *ex, float *hy) {
     for (int i = idx+1; i < nx; i += stx)
         ex[i] = ca[i] * ex[i] + cb[i] * (hy[i-1] - hy[i]);
     /* put a sinusoidal wave at the low end */
-    if (idx == 1) ex[1] += sinusoidal(t, 0.01f, 700e6);
+    if (idx == 1) ex[1] += sinusoidal(t, 0.01f, 700e6f);
 }
 
 
@@ -64,7 +63,7 @@ void hyfield(int nx, float *ex, float *hy, float *bc) {
     if (idx == nx-1) ex[nx-1] = bc[3], bc[3] = bc[2], bc[2] = ex[nx-2];
     /* calculate the Hy field */
     for (int i = idx; i < nx-1; i += stx)
-        hy[i] += 0.5 * (ex[i] - ex[i+1]);
+        hy[i] += 0.5f * (ex[i] - ex[i+1]);
 }
 """
 
