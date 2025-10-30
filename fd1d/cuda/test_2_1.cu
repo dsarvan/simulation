@@ -21,8 +21,8 @@ typedef struct {
 
 __device__
 float sinusoidal(int t, float ds, float freq) {
-    float dt = ds/6e8;  /* time step (s) */
-    return sin(2*M_PI*freq*dt*t);
+    float dt = ds/6e8f;  /* time step (s) */
+    return sinf(2*M_PI*freq*dt*t);
 }
 
 
@@ -30,9 +30,9 @@ __global__
 void dxfield(int t, int nx, float *dx, float *hy) {
     /* calculate the electric flux density Dx */
     for (int i = idx+1; i < nx; i += stx)
-        dx[i] += 0.5 * (hy[i-1] - hy[i]);
+        dx[i] += 0.5f * (hy[i-1] - hy[i]);
     /* put a sinusoidal wave at the low end */
-    if (idx == 1) dx[1] += sinusoidal(t, 0.01f, 700e6);
+    if (idx == 1) dx[1] += sinusoidal(t, 0.01f, 700e6f);
 }
 
 
@@ -53,7 +53,7 @@ void hyfield(int nx, float *ex, float *hy, float *bc) {
     if (idx == nx-1) ex[nx-1] = bc[3], bc[3] = bc[2], bc[2] = ex[nx-2];
     /* calculate the Hy field */
     for (int i = idx; i < nx-1; i += stx)
-        hy[i] += 0.5 * (ex[i] - ex[i+1]);
+        hy[i] += 0.5f * (ex[i] - ex[i+1]);
 }
 
 
@@ -63,7 +63,7 @@ medium dielectric(int nx, float dt, float epsr, float sigma) {
     cudaMallocManaged(&md.nbx, nx*sizeof(*md.nbx));
     for (int i = 0; i < nx; md.nax[i] = 1.0f, i++);
     for (int i = 0; i < nx; md.nbx[i] = 0.0f, i++);
-    float eps0 = 8.854e-12;  /* vacuum permittivity (F/m) */
+    float eps0 = 8.854e-12f;  /* vacuum permittivity (F/m) */
     for (int i = nx/2; i < nx; i++) {
         md.nax[i] = 1/(epsr + sigma*dt/eps0);
         md.nbx[i] = sigma*dt/eps0;
@@ -96,10 +96,10 @@ int main() {
     cudaMallocManaged(&bc, 4*sizeof(*bc));
     for (int i = 0; i < 4; bc[i] = 0.0f, i++);
 
-    float ds = 0.01;  /* spatial step (m) */
-    float dt = ds/6e8;  /* time step (s) */
-    float epsr = 4.0;  /* relative permittivity */
-    float sigma = 0.04;  /* conductivity (S/m) */
+    float ds = 0.01f;  /* spatial step (m) */
+    float dt = ds/6e8f;  /* time step (s) */
+    float epsr = 4.0f;  /* relative permittivity */
+    float sigma = 0.04f;  /* conductivity (S/m) */
     medium md = dielectric(nx, dt, epsr, sigma);
 
     int numSM;
