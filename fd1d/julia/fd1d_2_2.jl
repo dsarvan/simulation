@@ -14,17 +14,16 @@ plt.matplotlib.style.use("../pyplot.mplstyle")
 
 function visualize(ns::Int, nx::Int, epsr::Float64, sigma::Float64, nax::Array{Float64}, ex::Array{Float64})::Nothing
     fig, ax = plt.subplots(figsize=(8,3), gridspec_kw=Dict("hspace"=>0.2))
-    fig.suptitle(raw"FDTD simulation of a pulse striking dielectric material")
-    medium = epsr > 1 ? (1 .-nax)/(1-nax[end])*1e3 : (1 .-nax)
-    medium[medium.==0] .= -1e3
-    ax.plot(ex, color="black", linewidth=1)
-    ax.fill_between(0:nx-1, medium, medium[1], color="y", alpha=0.3)
+    fig.suptitle("FDTD simulation of a pulse striking dielectric material")
+    medium = epsr > 1 ? findall(x->x!=0,1.0./nax.-1) : 1.0./nax.-1
+    ax.plot(0:nx-1, ex, color="k", linewidth=1.0)
+    ax.axvspan(medium[1], medium[end], color="y", alpha=0.3)
     ax.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
-    ax.set(xticks=0:round(Int, div(nx,10)/10)*10:nx)
-    ax.set(xlabel=raw"$z\;(cm)$", ylabel=raw"$E_x\;(V/m)$")
-    ax.text(0.02, 0.90, raw"$T$ = "*"$ns", transform=ax.transAxes)
-    ax.text(0.90, 0.90, raw"$\epsilon_r$ = "*"$epsr", transform=ax.transAxes)
-    ax.text(0.85, 0.80, raw"$\sigma$ = "*"$sigma"*raw" $S/m$", transform=ax.transAxes)
+    ax.set(xticks=0:Int(ceil(nx/500)*25):nx)
+    ax.set(xlabel="\$z\\;(cm)\$", ylabel="\$E_x\\;(V/m)\$")
+    ax.text(0.02, 0.90, "\$T\$ = $ns", transform=ax.transAxes)
+    ax.text(0.90, 0.90, "\$\\epsilon_r\$ = $epsr", transform=ax.transAxes)
+    ax.text(0.85, 0.80, "\$\\sigma\$ = $sigma \$S/m\$", transform=ax.transAxes)
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
     plt.savefig("fd1d_2_2.png", dpi=100)
 end
@@ -32,17 +31,16 @@ end
 
 function amplitude(ns::Int, nx::Int, epsr::Float64, sigma::Float64, nax::Array{Float64}, amp::Array{Float64})::Nothing
     fig, ax = plt.subplots(figsize=(8,3), gridspec_kw=Dict("hspace"=>0.2))
-    fig.suptitle(raw"The discrete Fourier transform with pulse as its source")
-    medium = epsr > 1 ? (1 .-nax)/(1-nax[end])*1e3 : (1 .-nax)
-    medium[medium.==0] .= -1e3
-    ax.plot(amp, color="black", linewidth=1)
-    ax.fill_between(0:nx-1, medium, medium[1], color="y", alpha=0.3)
+    fig.suptitle("The discrete Fourier transform with pulse as its source")
+    medium = epsr > 1 ? findall(x->x!=0,1.0./nax.-1) : 1.0./nax.-1
+    ax.plot(0:nx-1, amp, color="k", linewidth=1.0)
+    ax.axvspan(medium[1], medium[end], color="y", alpha=0.3)
     ax.set(xlim=(0, nx-1), ylim=(-0.2, 2.2))
-    ax.set(xticks=0:round(Int, div(nx,10)/10)*10:nx)
-    ax.set(xlabel=raw"$z\;(cm)$", ylabel=raw"$E_x\;(V/m)$")
-    ax.text(0.02, 0.90, raw"$T$ = "*"$ns", transform=ax.transAxes)
-    ax.text(0.90, 0.90, raw"$\epsilon_r$ = "*"$epsr", transform=ax.transAxes)
-    ax.text(0.85, 0.80, raw"$\sigma$ = "*"$sigma"*raw" $S/m$", transform=ax.transAxes)
+    ax.set(xticks=0:Int(ceil(nx/500)*25):nx)
+    ax.set(xlabel="\$z\\;(cm)\$", ylabel="\$Amplitude\$")
+    ax.text(0.02, 0.90, "\$T\$ = $ns", transform=ax.transAxes)
+    ax.text(0.90, 0.90, "\$\\epsilon_r\$ = $epsr", transform=ax.transAxes)
+    ax.text(0.85, 0.80, "\$\\sigma\$ = $sigma \$S/m\$", transform=ax.transAxes)
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
     plt.savefig("fd1d_amp_2_2.png", dpi=100)
 end
@@ -68,14 +66,12 @@ end
 
 
 function fourier(t::Int32, nf::Int, nx::Int, dt::Float64, freq::Array{Float64}, ex::Array{Float64}, ft::ftrans)
+    # calculate the Fourier transform of input source
+    @views ft.r_in[1:nf] .+= cos.(2*pi*freq[1:nf]*dt*t) .* ex[11]
+    @views ft.i_in[1:nf] .-= sin.(2*pi*freq[1:nf]*dt*t) .* ex[11]
     # calculate the Fourier transform of Ex field
     @views ft.r_pt[1:nf,1:nx] .+= cos.(2*pi*freq[1:nf]*dt*t) .* ex[1:nx]'
     @views ft.i_pt[1:nf,1:nx] .-= sin.(2*pi*freq[1:nf]*dt*t) .* ex[1:nx]'
-    if t < div(nx,2)
-        # calculate the Fourier transform of input source
-        @views ft.r_in[1:nf] .+= cos.(2*pi*freq[1:nf]*dt*t) .* ex[11]
-        @views ft.i_in[1:nf] .-= sin.(2*pi*freq[1:nf]*dt*t) .* ex[11]
-    end
 end
 
 
@@ -109,8 +105,8 @@ function dielectric(nx::Int, dt::Float64, epsr::Float64, sigma::Float64)::medium
         fill(0.0::Float64, nx),
     )
     eps0::Float64 = 8.854e-12  # vaccum permittivity (F/m)
-    md.nax[div(nx,2)+1:nx] .= 1/(epsr + sigma*dt/eps0)
-    md.nbx[div(nx,2)+1:nx] .= sigma*dt/eps0
+    md.nax[nx÷2+1:nx] .= 1/(epsr + sigma*dt/eps0)
+    md.nbx[nx÷2+1:nx] .= sigma*dt/eps0
     return md
 end
 
