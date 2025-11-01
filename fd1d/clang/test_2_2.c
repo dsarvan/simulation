@@ -23,22 +23,20 @@ typedef struct {
 
 
 float gaussian(int t, int t0, float sigma) {
-    return exp(-0.5*(t - t0)/sigma*(t - t0)/sigma);
+    return expf(-0.5f*(t - t0)/sigma*(t - t0)/sigma);
 }
 
 
 void fourier(int t, int nf, int nx, float dt, float *freq, float *ex, ftrans *ft) {
     for (int n = 0; n < nf; n++) {
+        /* calculate the Fourier transform of input source */
+        ft->r_in[n] += cosf(2*M_PI*freq[n]*dt*t) * ex[10];
+        ft->i_in[n] -= sinf(2*M_PI*freq[n]*dt*t) * ex[10];
         for (int i = 0; i < nx; i++) {
             /* calculate the Fourier transform of Ex field */
             int m = n*nx+i;
-            ft->r_pt[m] += cos(2*M_PI*freq[n]*dt*t) * ex[i];
-            ft->i_pt[m] -= sin(2*M_PI*freq[n]*dt*t) * ex[i];
-        }
-        if (t < nx/2) {
-            /* calculate the Fourier transform of input source */
-            ft->r_in[n] += cos(2*M_PI*freq[n]*dt*t) * ex[10];
-            ft->i_in[n] -= sin(2*M_PI*freq[n]*dt*t) * ex[10];
+            ft->r_pt[m] += cosf(2*M_PI*freq[n]*dt*t) * ex[i];
+            ft->i_pt[m] -= sinf(2*M_PI*freq[n]*dt*t) * ex[i];
         }
     }
 }
@@ -47,7 +45,7 @@ void fourier(int t, int nf, int nx, float dt, float *freq, float *ex, ftrans *ft
 void dxfield(int t, int nx, float *dx, float *hy) {
     /* calculate the electric flux density Dx */
     for (int i = 1; i < nx; i++)
-        dx[i] += 0.5 * (hy[i-1] - hy[i]);
+        dx[i] += 0.5f * (hy[i-1] - hy[i]);
     /* put a Gaussian pulse at the low end */
     dx[1] += gaussian(t, 50, 10.0f);
 }
@@ -68,7 +66,7 @@ void hyfield(int nx, float *ex, float *hy, float *bc) {
     ex[nx-1] = bc[3], bc[3] = bc[2], bc[2] = ex[nx-2];
     /* calculate the Hy field */
     for (int i = 0; i < nx-1; i++)
-        hy[i] += 0.5 * (ex[i] - ex[i+1]);
+        hy[i] += 0.5f * (ex[i] - ex[i+1]);
 }
 
 
@@ -77,7 +75,7 @@ medium dielectric(int nx, float dt, float epsr, float sigma) {
     md.nax = (float*) calloc(nx, sizeof(*md.nax));
     md.nbx = (float*) calloc(nx, sizeof(*md.nbx));
     for (int i = 0; i < nx; md.nax[i] = 1.0f, i++);
-    float eps0 = 8.854e-12;  /* vacuum permittivity (F/m) */
+    float eps0 = 8.854e-12f;  /* vacuum permittivity (F/m) */
     for (int i = nx/2; i < nx; i++) {
         md.nax[i] = 1/(epsr + sigma*dt/eps0);
         md.nbx[i] = sigma*dt/eps0;
@@ -98,14 +96,14 @@ int main() {
 
     float bc[4] = {0.0f};
 
-    float ds = 0.01;  /* spatial step (m) */
-    float dt = ds/6e8;  /* time step (s) */
-    float epsr = 4.0;  /* relative permittivity */
-    float sigma = 0.0;  /* conductivity (S/m) */
+    float ds = 0.01f;  /* spatial step (m) */
+    float dt = ds/6e8f;  /* time step (s) */
+    float epsr = 4.0f;  /* relative permittivity */
+    float sigma = 0.0f;  /* conductivity (S/m) */
     medium md = dielectric(nx, dt, epsr, sigma);
 
     /* frequency 100 MHz, 200 MHz, 500 MHz */
-    float freq[] = {100e6, 200e6, 500e6};
+    float freq[] = {100e6f, 200e6f, 500e6f};
     int nf = (sizeof freq)/(sizeof freq[0]);  /* number of frequencies */
 
     ftrans ft;
