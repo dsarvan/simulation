@@ -33,13 +33,12 @@ def gaussian(t: int, t0: int, sigma: float) -> float:
 
 
 def fourier(t: int, nf: int, nx: int, dt: float, freq: np.ndarray, ex: np.ndarray, ft: ftrans) -> None:
+    # calculate the Fourier transform of input source
+    ft.r_in[0:nf] += cos(2*pi*freq[0:nf]*dt*t) * ex[10]
+    ft.i_in[0:nf] -= sin(2*pi*freq[0:nf]*dt*t) * ex[10]
     # calculate the Fourier transform of Ex field
     ft.r_pt[0:nf,0:nx] += cos(2*pi*freq[0:nf]*dt*t) * ex[0:nx]
     ft.i_pt[0:nf,0:nx] -= sin(2*pi*freq[0:nf]*dt*t) * ex[0:nx]
-    if t < nx//2:
-        # calculate the Fourier transform of input source
-        ft.r_in[0:nf] += cos(2*pi*freq[0:nf]*dt*t) * ex[10]
-        ft.i_in[0:nf] -= sin(2*pi*freq[0:nf]*dt*t) * ex[10]
 
 
 def dxfield(t: int, nx: int, dx: np.ndarray, hy: np.ndarray) -> None:
@@ -122,21 +121,20 @@ def main():
     # draw an empty plot, but preset the plot x- and y- limits
     fig, (ax1, ax2) = plt.subplots(2, sharex=False, gridspec_kw={"hspace":0.4})
     fig.suptitle(r"FDTD simulation of a pulse striking Debye dielectric material")
-    medium = (1-md.nax)/(1-md.nax[-1])*1e3 if epsr > 1 else (1-md.nax)
-    medium[medium==0] = -1e3
-    axline1, = ax1.plot(ex, color="black", linewidth=1)
-    ax1.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
+    medium = np.where(1.0/md.nax-1)[0] if epsr > 1 else (1.0/md.nax-1)
+    axline1, = ax1.plot(range(nx), ex, color="k", linewidth=1.0)
+    ax1.axvspan(medium[0], medium[-1], color="y", alpha=0.3)
     ax1.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
-    ax1.set(xticks=range(0, nx+1, round(nx//10,-1)))
+    ax1.set(xticks=range(0, nx+1, int(np.ceil(nx/500)*25)))
     ax1.set(xlabel=r"$z\;(cm)$", ylabel=r"$E_x\;(V/m)$")
     axtime1 = ax1.text(0.02, 0.90, "", transform=ax1.transAxes)
     axepsr1 = ax1.text(0.90, 0.90, "", transform=ax1.transAxes)
     axsigm1 = ax1.text(0.85, 0.80, "", transform=ax1.transAxes)
-    axline2, = ax2.plot(amplt[2], color="black", linewidth=1)
-    ax2.fill_between(range(nx), medium, medium[0], color='y', alpha=0.3)
+    axline2, = ax2.plot(range(nx), amplt[2], color="k", linewidth=1.0)
+    ax2.axvspan(medium[0], medium[-1], color="y", alpha=0.3)
     ax2.set(xlim=(0, nx-1), ylim=(-0.2, 2.2))
-    ax2.set(xticks=range(0, nx+1, round(nx//10,-1)))
-    ax2.set(xlabel=r"$z\;(cm)$", ylabel=r"$Amp\;(V)$")
+    ax2.set(xticks=range(0, nx+1, int(np.ceil(nx/500)*25)))
+    ax2.set(xlabel=r"$z\;(cm)$", ylabel=r"$Amplitude$")
     axtime2 = ax2.text(0.02, 0.90, "", transform=ax2.transAxes)
     axepsr2 = ax2.text(0.90, 0.90, "", transform=ax2.transAxes)
     axsigm2 = ax2.text(0.85, 0.80, "", transform=ax2.transAxes)
