@@ -29,16 +29,14 @@ double gaussian(int t, int t0, double sigma) {
 
 void fourier(int t, int nf, int nx, double dt, double *freq, double *ex, ftrans *ft) {
     for (int n = 0; n < nf; n++) {
+        /* calculate the Fourier transform of input source */
+        ft->r_in[n] += cos(2*M_PI*freq[n]*dt*t) * ex[10];
+        ft->i_in[n] -= sin(2*M_PI*freq[n]*dt*t) * ex[10];
         for (int i = 0; i < nx; i++) {
             /* calculate the Fourier transform of Ex field */
             int m = n*nx+i;
             ft->r_pt[m] += cos(2*M_PI*freq[n]*dt*t) * ex[i];
             ft->i_pt[m] -= sin(2*M_PI*freq[n]*dt*t) * ex[i];
-        }
-        if (t < nx/2) {
-            /* calculate the Fourier transform of input source */
-            ft->r_in[n] += cos(2*M_PI*freq[n]*dt*t) * ex[10];
-            ft->i_in[n] -= sin(2*M_PI*freq[n]*dt*t) * ex[10];
         }
     }
 }
@@ -136,8 +134,8 @@ int main() {
     for (int n = 0; n < nf; n++) {
         for (int i = 0; i < nx; i++) {
             int m = n*nx+i;
-            amplt[m] = 1/hypotf(ft.r_in[n],ft.i_in[n]) * hypotf(ft.r_pt[m],ft.i_pt[m]);
-            phase[m] = atan2f(ft.i_pt[m],ft.r_pt[m]) - atan2f(ft.i_in[n],ft.r_in[n]);
+            amplt[m] = 1/hypot(ft.r_in[n],ft.i_in[n]) * hypot(ft.r_pt[m],ft.i_pt[m]);
+            phase[m] = atan2(ft.i_pt[m],ft.r_pt[m]) - atan2(ft.i_in[n],ft.r_in[n]);
         }
     }
 
