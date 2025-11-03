@@ -28,23 +28,21 @@ typedef struct {
 
 __device__
 float gaussian(int t, int t0, float sigma) {
-    return exp(-0.5*(t - t0)/sigma*(t - t0)/sigma);
+    return expf(-0.5f*(t - t0)/sigma*(t - t0)/sigma);
 }
 
 
 __global__
 void fourier(int t, int nf, int nx, float dt, float *freq, float *ex, ftrans *ft) {
     for (int n = threadIdx.y; n < nf; n += blockDim.y) {
+        /* calculate the Fourier transform of input source */
+        if (idx == 0) ft->r_in[n] += cosf(2*M_PI*freq[n]*dt*t) * ex[10];
+        if (idx == 0) ft->i_in[n] -= sinf(2*M_PI*freq[n]*dt*t) * ex[10];
         for (int i = idx; i < nx; i += stx) {
             /* calculate the Fourier transform of Ex field */
             int m = n*nx+i;
-            ft->r_pt[m] += cos(2*M_PI*freq[n]*dt*t) * ex[i];
-            ft->i_pt[m] -= sin(2*M_PI*freq[n]*dt*t) * ex[i];
-        }
-        if (idx == 0 && t < nx/2) {
-            /* calculate the Fourier transform of input source */
-            ft->r_in[n] += cos(2*M_PI*freq[n]*dt*t) * ex[10];
-            ft->i_in[n] -= sin(2*M_PI*freq[n]*dt*t) * ex[10];
+            ft->r_pt[m] += cosf(2*M_PI*freq[n]*dt*t) * ex[i];
+            ft->i_pt[m] -= sinf(2*M_PI*freq[n]*dt*t) * ex[i];
         }
     }
 }
@@ -54,7 +52,7 @@ __global__
 void dxfield(int t, int nx, float *dx, float *hy) {
     /* calculate the electric flux density Dx */
     for (int i = idx+1; i < nx; i += stx)
-        dx[i] += 0.5 * (hy[i-1] - hy[i]);
+        dx[i] += 0.5f * (hy[i-1] - hy[i]);
     /* put a Gaussian pulse at the low end */
     if (idx == 1) dx[1] += gaussian(t, 50, 10.0f);
 }
@@ -78,7 +76,7 @@ void hyfield(int nx, float *ex, float *hy, float *bc) {
     if (idx == nx-1) ex[nx-1] = bc[3], bc[3] = bc[2], bc[2] = ex[nx-2];
     /* calculate the Hy field */
     for (int i = idx; i < nx-1; i += stx)
-        hy[i] += 0.5 * (ex[i] - ex[i+1]);
+        hy[i] += 0.5f * (ex[i] - ex[i+1]);
 }
 
 
@@ -92,7 +90,7 @@ medium dielectric(int nx, float dt, float chi, float tau, float epsr, float sigm
     for (int i = 0; i < nx; md.nbx[i] = 0.0f, i++);
     for (int i = 0; i < nx; md.ncx[i] = 0.0f, i++);
     for (int i = 0; i < nx; md.ndx[i] = 0.0f, i++);
-    float eps0 = 8.854e-12;  /* vacuum permittivity (F/m) */
+    float eps0 = 8.854e-12f;  /* vacuum permittivity (F/m) */
     for (int i = nx/2; i < nx; i++) {
         md.nax[i] = 1/(epsr + sigma*dt/eps0 + chi*dt/tau);
         md.nbx[i] = sigma*dt/eps0;
@@ -129,19 +127,19 @@ int main() {
     cudaMallocManaged(&bc, 4*sizeof(*bc));
     for (int i = 0; i < 4; bc[i] = 0.0f, i++);
 
-    float ds = 0.01;  /* spatial step (m) */
-    float dt = ds/6e8;  /* time step (s) */
-    float chi = 2.0;  /* relaxation susceptibility */
-    float tau = 0.001e-6;  /* relaxation time (s) */
-    float epsr = 2.0;  /* relative permittivity */
-    float sigma = 0.01;  /* conductivity (S/m) */
+    float ds = 0.01f;  /* spatial step (m) */
+    float dt = ds/6e8f;  /* time step (s) */
+    float chi = 2.0f;  /* relaxation susceptibility */
+    float tau = 0.001e-6f;  /* relaxation time (s) */
+    float epsr = 2.0f;  /* relative permittivity */
+    float sigma = 0.01f;  /* conductivity (S/m) */
     medium md = dielectric(nx, dt, chi, tau, epsr, sigma);
 
     int nf = 3;  /* number of frequencies */
     /* frequency 50 MHz, 200 MHz, 500 MHz */
     float *freq;
     cudaMallocManaged(&freq, nf*sizeof(*freq));
-    freq[0] = 50e6; freq[1] = 200e6; freq[2] = 500e6;
+    freq[0] = 50e6f; freq[1] = 200e6f; freq[2] = 500e6f;
 
     ftrans ft;
     cudaMallocManaged(&ft.r_pt, nf*nx*sizeof(*ft.r_pt));
