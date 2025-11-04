@@ -49,10 +49,10 @@ def hfield(nx: int, ny: int, ez: np.ndarray, hx: np.ndarray, hy: np.ndarray) -> 
 
 def main():
 
-    nx: int = 60  # number of grid points
-    ny: int = 60  # number of grid points
+    nx: int = 100  # number of grid points
+    ny: int = 100  # number of grid points
 
-    ns: int = 180  # number of time steps
+    ns: int = 250  # number of time steps
 
     dz = np.zeros((nx, ny), dtype=np.float64)
     ez = np.zeros((nx, ny), dtype=np.float64)
@@ -79,7 +79,7 @@ def main():
     fig, ax = plt.subplots(subplot_kw={"projection":"3d"})
     fig.suptitle(r"FDTD simulation of a pulse in free space")
     yv, xv = np.meshgrid(range(ny), range(nx))
-    ax.plot_surface(xv, yv, ez[0], rstride=1, cstride=1, cmap="gray", lw=0.25)
+    ax.plot_surface(xv, yv, ez[0], rstride=1, cstride=1, cmap="gray", lw=10/nx)
     ax.text2D(0.1, 0.7, "", transform=ax.transAxes)
     ax.set(xlim=(0, nx), ylim=(0, ny), zlim=(0, 1))
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$", zlabel=r"$E_z\;(V/m)$")
@@ -89,7 +89,7 @@ def main():
     with writer.saving(fig, "fd2d_surface_3_1.mp4", 300):
         for t in np.arange(1, ns+1).astype(np.int32):
             ax.clear()
-            ax.plot_surface(xv, yv, ez[t], rstride=1, cstride=1, cmap="gray", lw=0.25)
+            ax.plot_surface(xv, yv, ez[t], rstride=1, cstride=1, cmap="gray", lw=10/nx)
             ax.text2D(0.1, 0.7, rf"$T$ = {t}", transform=ax.transAxes)
             ax.set(xlim=(0, nx), ylim=(0, ny), zlim=(0, 1))
             ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$", zlabel=r"$E_z\;(V/m)$")
@@ -100,18 +100,17 @@ def main():
     # draw an empty plot, but preset the plot x-, y- and z- limits
     fig, ax = plt.subplots(gridspec_kw={"hspace":0.2})
     fig.suptitle(r"FDTD simulation of a pulse in free space")
-    yv, xv = np.meshgrid(range(ny), range(nx))
-    ax.contourf(xv, yv, ez[0], cmap="gray", alpha=0.75)
-    ax.contour(xv, yv, ez[0], colors="k", linewidths=0.25)
+    yv, xv = np.meshgrid(range(ny), range(nx)); ezmax = np.abs(ez).max()
+    levels = np.linspace(-ezmax, ezmax, int(2/0.04))
+    ax.contour(xv, yv, ez[0], levels, cmap="gray", linewidths=1.5)
     ax.set(xlim=(0, nx-1), ylim=(0, ny-1), aspect="equal")
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$")
-    plt.subplots_adjust(bottom=0.1, hspace=0.45)
+    plt.subplots_adjust(bottom=0.2, hspace=0.45)
 
     with writer.saving(fig, "fd2d_contour_3_1.mp4", 300):
         for t in np.arange(1, ns+1).astype(np.int32):
             ax.clear()
-            ax.contourf(xv, yv, ez[t], cmap="gray", alpha=0.75)
-            ax.contour(xv, yv, ez[t], colors="k", linewidths=0.25)
+            ax.contour(xv, yv, ez[t], levels, cmap="gray", linewidths=1.5)
             ax.set(xlim=(0, nx-1), ylim=(0, ny-1), aspect="equal")
             ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$")
             writer.grab_frame()
