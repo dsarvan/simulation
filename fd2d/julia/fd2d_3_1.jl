@@ -17,10 +17,10 @@ function surfaceplot(ns::Int, nx::Int, ny::Int, ez::Array{Float64})::Nothing
     fig, ax = plt.subplots(subplot_kw=Dict("projection"=>"3d"))
     fig.suptitle(raw"FDTD simulation of a pulse in free space")
     yv, xv = meshgrid(0:ny-1, 0:nx-1)
-    ax.plot_surface(xv, yv, ez, rstride=1, cstride=1, cmap="gray", lw=0.25)
-    ax.text2D(0.1, 0.7, raw"$T$ = "*"$ns", transform=ax.transAxes)
+    ax.plot_surface(xv, yv, ez, rstride=1, cstride=1, cmap="gray", lw=10/nx)
+    ax.text2D(0.1, 0.7, "\$T\$ = $ns", transform=ax.transAxes)
     ax.set(xlim=(0, nx), ylim=(0, ny), zlim=(0, 1))
-    ax.set(xlabel=raw"$x\;(cm)$", ylabel=raw"$y\;(cm)$", zlabel=raw"$E_z\;(V/m)$")
+    ax.set(xlabel="\$x\\;(cm)\$", ylabel="\$y\\;(cm)\$", zlabel="\$E_z\\;(V/m)\$")
     ax.zaxis.set_rotate_label(false); ax.view_init(elev=20.0, azim=45)
     plt.savefig("fd2d_surface_3_1.png", dpi=100)
 end
@@ -29,11 +29,11 @@ end
 function contourplot(ns::Int, nx::Int, ny::Int, ez::Array{Float64})::Nothing
     fig, ax = plt.subplots(figsize=(4,4), gridspec_kw=Dict("hspace"=>0.2))
     fig.suptitle(raw"FDTD simulation of a pulse in free space")
-    yv, xv = meshgrid(0:ny-1, 0:nx-1)
-    ax.contourf(xv, yv, ez, cmap="gray", alpha=0.75)
-    ax.contour(xv, yv, ez, colors="k", linewidths=0.25)
+    yv, xv = meshgrid(0:ny-1, 0:nx-1); ezmax = maximum(abs.(ez))
+    levels = range(-ezmax, ezmax, Int(2/0.04))
+    ax.contour(xv, yv, ez, levels, cmap="gray", linewidths=1.5)
     ax.set(xlim=(0, nx-1), ylim=(0, ny-1), aspect="equal")
-    ax.set(xlabel=raw"$x\;(cm)$", ylabel=raw"$y\;(cm)$")
+    ax.set(xlabel="\$x\\;(cm)\$", ylabel="\$y\\;(cm)\$")
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
     plt.savefig("fd2d_contour_3_1.png", dpi=100)
 end
@@ -79,10 +79,10 @@ end
 
 function main()
 
-    nx::Int = 60  # number of grid points
-    ny::Int = 60  # number of grid points
+    nx::Int = 100  # number of grid points
+    ny::Int = 100  # number of grid points
 
-    ns::Int = 70  # number of time steps
+    ns::Int = 90  # number of time steps
 
     dz = zeros(Float64, (nx, ny))
     ez = zeros(Float64, (nx, ny))
