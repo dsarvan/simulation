@@ -18,7 +18,7 @@ def surfaceplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
     fig, ax = plt.subplots(subplot_kw={"projection":"3d"})
     fig.suptitle(r"FDTD simulation of a pulse in free space")
     yv, xv = np.meshgrid(range(ny), range(nx))
-    ax.plot_surface(xv, yv, ez, rstride=1, cstride=1, cmap="gray", lw=0.25)
+    ax.plot_surface(xv, yv, ez, rstride=1, cstride=1, cmap="gray", lw=10/nx)
     ax.text2D(0.1, 0.7, rf"$T$ = {ns}", transform=ax.transAxes)
     ax.set(xlim=(0, nx), ylim=(0, ny), zlim=(0, 1))
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$", zlabel=r"$E_z\;(V/m)$")
@@ -29,9 +29,9 @@ def surfaceplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
 def contourplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
     fig, ax = plt.subplots(figsize=(4,4), gridspec_kw={"hspace":0.2})
     fig.suptitle(r"FDTD simulation of a pulse in free space")
-    yv, xv = np.meshgrid(range(ny), range(nx))
-    ax.contourf(xv, yv, ez, cmap="gray", alpha=0.75)
-    ax.contour(xv, yv, ez, colors="k", linewidths=0.25)
+    yv, xv = np.meshgrid(range(ny), range(nx)); ezmax = np.abs(ez).max()
+    levels = np.linspace(-ezmax, ezmax, int(2/0.04))
+    ax.contour(xv, yv, ez, levels, cmap="gray", linewidths=1.5)
     ax.set(xlim=(0, nx-1), ylim=(0, ny-1), aspect="equal")
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$")
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
@@ -72,10 +72,10 @@ def hfield(nx: int, ny: int, ez: np.ndarray, hx: np.ndarray, hy: np.ndarray) -> 
 
 def main():
 
-    nx: int = 60  # number of grid points
-    ny: int = 60  # number of grid points
+    nx: int = 100  # number of grid points
+    ny: int = 100  # number of grid points
 
-    ns: int = 70  # number of time steps
+    ns: int = 90  # number of time steps
 
     dz = np.zeros((nx, ny), dtype=np.float64)
     ez = np.zeros((nx, ny), dtype=np.float64)
