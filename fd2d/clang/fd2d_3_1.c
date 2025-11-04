@@ -56,10 +56,10 @@ void hfield(int nx, int ny, double *ez, double *hx, double *hy) {
 
 int main() {
 
-    int nx = 60;  /* number of grid points */
-    int ny = 60;  /* number of grid points */
+    int nx = 100;  /* number of grid points */
+    int ny = 100;  /* number of grid points */
 
-    int ns = 70;  /* number of time steps */
+    int ns = 90;  /* number of time steps */
 
     double *dz = (double*) calloc(nx*ny, sizeof(*dz));
     double *ez = (double*) calloc(nx*ny, sizeof(*ez));
