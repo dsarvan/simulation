@@ -22,24 +22,24 @@ def surfaceplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
     fig, ax = plt.subplots(subplot_kw={"projection":"3d"})
     fig.suptitle(r"FDTD simulation of a pulse in free space")
     yv, xv = np.meshgrid(range(ny), range(nx))
-    ax.plot_surface(xv, yv, ez, rstride=1, cstride=1, cmap="gray", lw=0.25)
+    ax.plot_surface(xv, yv, ez, rstride=1, cstride=1, cmap="gray", lw=10/nx)
     ax.text2D(0.1, 0.7, rf"$T$ = {ns}", transform=ax.transAxes)
     ax.set(xlim=(0, nx), ylim=(0, ny), zlim=(0, 1))
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$", zlabel=r"$E_z\;(V/m)$")
     ax.zaxis.set_rotate_label(False); ax.view_init(elev=20.0, azim=45)
-    plt.show()
+    plt.savefig("test_surface_3_1.png", dpi=100)
 
 
 def contourplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
     fig, ax = plt.subplots(figsize=(4,4), gridspec_kw={"hspace":0.2})
     fig.suptitle(r"FDTD simulation of a pulse in free space")
-    yv, xv = np.meshgrid(range(ny), range(nx))
-    ax.contourf(xv, yv, ez, cmap="gray", alpha=0.75)
-    ax.contour(xv, yv, ez, colors="k", linewidths=0.25)
+    yv, xv = np.meshgrid(range(ny), range(nx)); ezmax = np.abs(ez).max()
+    levels = np.linspace(-ezmax, ezmax, int(2/0.04))
+    ax.contour(xv, yv, ez, levels, cmap="gray", linewidths=1.5)
     ax.set(xlim=(0, nx-1), ylim=(0, ny-1), aspect="equal")
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$")
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
-    plt.show()
+    plt.savefig("test_contour_3_1.png", dpi=100)
 
 
 kernel = """
@@ -51,7 +51,7 @@ kernel = """
 
 __device__
 float gaussian(int t, int t0, float sigma) {
-    return exp(-0.5*(t - t0)/sigma*(t - t0)/sigma);
+    return expf(-0.5f*(t - t0)/sigma*(t - t0)/sigma);
 }
 
 
@@ -61,7 +61,7 @@ void dfield(int t, int nx, int ny, float *dz, float *hx, float *hy) {
     for (int i = idy+1; i < nx; i += sty) {
         for (int j = idx+1; j < ny; j += stx) {
             int n = i*ny+j;
-            dz[n] += 0.5 * (hy[n] - hy[n-ny] - hx[n] + hx[n-1]);
+            dz[n] += 0.5f * (hy[n] - hy[n-ny] - hx[n] + hx[n-1]);
         }
     }
     __syncthreads();
@@ -88,8 +88,8 @@ void hfield(int nx, int ny, float *ez, float *hx, float *hy) {
     for (int i = idy; i < nx-1; i += sty) {
         for (int j = idx; j < ny-1; j += stx) {
             int n = i*ny+j;
-            hx[n] += 0.5 * (ez[n] - ez[n+1]);
-            hy[n] -= 0.5 * (ez[n] - ez[n+ny]);
+            hx[n] += 0.5f * (ez[n] - ez[n+1]);
+            hy[n] -= 0.5f * (ez[n] - ez[n+ny]);
         }
     }
 }
