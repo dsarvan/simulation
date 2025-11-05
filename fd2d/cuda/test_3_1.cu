@@ -17,7 +17,7 @@
 
 __device__
 float gaussian(int t, int t0, float sigma) {
-    return exp(-0.5*(t - t0)/sigma*(t - t0)/sigma);
+    return expf(-0.5f*(t - t0)/sigma*(t - t0)/sigma);
 }
 
 
@@ -27,7 +27,7 @@ void dfield(int t, int nx, int ny, float *dz, float *hx, float *hy) {
     for (int i = idy+1; i < nx; i += sty) {
         for (int j = idx+1; j < ny; j += stx) {
             int n = i*ny+j;
-            dz[n] += 0.5 * (hy[n] - hy[n-ny] - hx[n] + hx[n-1]);
+            dz[n] += 0.5f * (hy[n] - hy[n-ny] - hx[n] + hx[n-1]);
         }
     }
     __syncthreads();
@@ -54,8 +54,8 @@ void hfield(int nx, int ny, float *ez, float *hx, float *hy) {
     for (int i = idy; i < nx-1; i += sty) {
         for (int j = idx; j < ny-1; j += stx) {
             int n = i*ny+j;
-            hx[n] += 0.5 * (ez[n] - ez[n+1]);
-            hy[n] -= 0.5 * (ez[n] - ez[n+ny]);
+            hx[n] += 0.5f * (ez[n] - ez[n+1]);
+            hy[n] -= 0.5f * (ez[n] - ez[n+ny]);
         }
     }
 }
