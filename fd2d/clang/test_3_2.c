@@ -12,22 +12,16 @@
 
 
 typedef struct {
-    float *fx1;
-    float *fx2;
-    float *fx3;
-    float *fy1;
-    float *fy2;
-    float *fy3;
-    float *gx2;
-    float *gx3;
-    float *gy2;
-    float *gy3;
+    float *fx1, *fx2, *fx3;
+    float *fy1, *fy2, *fy3;
+    float *gx2, *gx3;
+    float *gy2, *gy3;
 } pmlayer;
 
 
 float sinusoidal(int t, float ds, float freq) {
-    float dt = ds/6e8;  /* time step (s) */
-    return sin(2*M_PI*freq*dt*t);
+    float dt = ds/6e8f;  /* time step (s) */
+    return sinf(2*M_PI*freq*dt*t);
 }
 
 
@@ -37,12 +31,12 @@ void dfield(int t, int nx, int ny, pmlayer *pml, float *dz, float *hx, float *hy
     for (int i = 1; i < nx; i++) {
         for (int j = 1; j < ny; j++) {
             int n = i*ny+j;
-            dz[n] = pml->gx3[i] * pml->gy3[j] * dz[n] + pml->gx2[i] * pml->gy2[j] * 0.5 * (hy[n] - hy[n-ny] - hx[n] + hx[n-1]);
+            dz[n] = pml->gx3[i] * pml->gy3[j] * dz[n] + pml->gx2[i] * pml->gy2[j] * 0.5f * (hy[n] - hy[n-ny] - hx[n] + hx[n-1]);
         }
     }
     /* put a sinusoidal source at a point that is offset five cells
      * from the center of the problem space in each direction */
-    dz[(nx/2-5)*ny+(ny/2-5)] = sinusoidal(t, 0.01f, 1500e6);
+    dz[(nx/2-5)*ny+(ny/2-5)] = sinusoidal(t, 0.01f, 1500e6f);
 }
 
 
@@ -66,8 +60,8 @@ void hfield(int nx, int ny, pmlayer *pml, float *ez, float *ihx, float *ihy, flo
             int n = i*ny+j;
             ihx[n] += ez[n] - ez[n+1];
             ihy[n] += ez[n] - ez[n+ny];
-            hx[n] = pml->fy3[j] * hx[n] + pml->fy2[j] * (0.5 * ez[n] - 0.5 * ez[n+1] + pml->fx1[i] * ihx[n]);
-            hy[n] = pml->fx3[i] * hy[n] - pml->fx2[i] * (0.5 * ez[n] - 0.5 * ez[n+ny] + pml->fy1[j] * ihy[n]);
+            hx[n] = pml->fy3[j] * hx[n] + pml->fy2[j] * (0.5f * ez[n] - 0.5f * ez[n+1] + pml->fx1[i] * ihx[n]);
+            hy[n] = pml->fx3[i] * hy[n] - pml->fx2[i] * (0.5f * ez[n] - 0.5f * ez[n+ny] + pml->fy1[j] * ihy[n]);
         }
     }
 }
@@ -76,8 +70,8 @@ void hfield(int nx, int ny, pmlayer *pml, float *ez, float *ihx, float *ihy, flo
 void pmlparam(int nx, int ny, int npml, pmlayer *pml) {
     /* calculate the two-dimensional perfectly matched layer (PML) parameters */
     for (int n = 0; n < npml; n++) {
-        float xm = 0.33*(npml-n)/npml*(npml-n)/npml*(npml-n)/npml;
-        float xn = 0.33*(npml-n-0.5)/npml*(npml-n-0.5)/npml*(npml-n-0.5)/npml;
+        float xm = 0.33f*(npml-n)/npml*(npml-n)/npml*(npml-n)/npml;
+        float xn = 0.33f*(npml-n-0.5f)/npml*(npml-n-0.5f)/npml*(npml-n-0.5f)/npml;
         pml->fx1[n] = pml->fx1[nx-2-n] = pml->fy1[n] = pml->fy1[ny-2-n] = xn;
         pml->fx2[n] = pml->fx2[nx-2-n] = pml->fy2[n] = pml->fy2[ny-2-n] = 1/(1+xn);
         pml->gx2[n] = pml->gx2[nx-1-n] = pml->gy2[n] = pml->gy2[ny-1-n] = 1/(1+xm);
@@ -131,11 +125,11 @@ int main() {
         pml.gy3[i] = 1.0f;
     }
 
-    int npml = 8;  /* pml thickness */
+    int npml = 80;  /* pml thickness */
     pmlparam(nx, ny, npml, &pml);
 
-    float ds = 0.01;  /* spatial step (m) */
-    float dt = ds/6e8;  /* time step (s) */
+    float ds = 0.01f;  /* spatial step (m) */
+    float dt = ds/6e8f;  /* time step (s) */
 
     float stime = omp_get_wtime();
 
