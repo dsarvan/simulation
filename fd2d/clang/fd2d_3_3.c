@@ -12,16 +12,10 @@
 
 
 typedef struct {
-    double *fx1;
-    double *fx2;
-    double *fx3;
-    double *fy1;
-    double *fy2;
-    double *fy3;
-    double *gx2;
-    double *gx3;
-    double *gy2;
-    double *gy3;
+    double *fx1, *fx2, *fx3;
+    double *fy1, *fy2, *fy3;
+    double *gx2, *gx3;
+    double *gy2, *gy3;
 } pmlayer;
 
 
@@ -138,10 +132,10 @@ void pmlparam(int nx, int ny, int npml, pmlayer *pml) {
 
 int main() {
 
-    int nx = 60;  /* number of grid points */
-    int ny = 60;  /* number of grid points */
+    int nx = 100;  /* number of grid points */
+    int ny = 100;  /* number of grid points */
 
-    int ns = 115;  /* number of time steps */
+    int ns = 120;  /* number of time steps */
 
     double *ezi = (double*) calloc(ny, sizeof(*ezi));
     double *hxi = (double*) calloc(ny, sizeof(*hxi));
