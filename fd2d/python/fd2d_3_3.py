@@ -16,11 +16,13 @@ plt.style.use("classic")
 plt.style.use("../pyplot.mplstyle")
 
 
-def surfaceplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
+def surfaceplot(ns: int, nx: int, ny: int, npml: int, ez: np.ndarray) -> None:
     fig, ax = plt.subplots(subplot_kw={"projection":"3d"})
     fig.suptitle(r"FDTD simulation of a plane wave in free space with PML")
-    yv, xv = np.meshgrid(range(ny), range(nx))
-    ax.plot_surface(xv, yv, ez, rstride=1, cstride=1, cmap="gray", lw=0.25)
+    yv, xv = np.meshgrid(range(ny), range(nx)); levels = [0.50,1.50]
+    pmlmsk = ((xv < npml)|(xv >= nx-npml)|(yv < npml)|(yv >= ny-npml))
+    ax.plot_surface(xv, yv, ez, rstride=1, cstride=1, cmap="gray", lw=10/nx)
+    ax.contourf(xv, yv, pmlmsk, levels, offset=0, colors="k", alpha=0.40)
     ax.text2D(0.1, 0.7, rf"$T$ = {ns}", transform=ax.transAxes)
     ax.set(xlim=(0, nx), ylim=(0, ny), zlim=(0, 1))
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$", zlabel=r"$E_z\;(V/m)$")
@@ -28,12 +30,14 @@ def surfaceplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
     plt.savefig("fd2d_surface_3_3.png", dpi=100)
 
 
-def contourplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
+def contourplot(ns: int, nx: int, ny: int, npml: int, ez: np.ndarray) -> None:
     fig, ax = plt.subplots(figsize=(4,4), gridspec_kw={"hspace":0.2})
     fig.suptitle(r"FDTD simulation of a plane wave in free space with PML")
-    yv, xv = np.meshgrid(range(ny), range(nx))
-    ax.contourf(xv, yv, ez, cmap="gray", alpha=0.75)
-    ax.contour(xv, yv, ez, colors="k", linewidths=0.25)
+    yv, xv = np.meshgrid(range(ny), range(nx)); ezmax = np.abs(ez).max()
+    levels = np.linspace(-ezmax, ezmax, int(2/0.04))
+    pmlmsk = ((xv < npml)|(xv >= nx-npml)|(yv < npml)|(yv >= ny-npml))
+    ax.contour(xv, yv, ez, levels, cmap="gray", alpha=1.0, linewidths=1.5)
+    ax.contourf(xv, yv, pmlmsk, levels=[0.50,1.50], colors="k", alpha=0.40)
     ax.set(xlim=(0, nx-1), ylim=(0, ny-1), aspect="equal")
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$")
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
@@ -41,16 +45,10 @@ def contourplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
 
 
 pmlayer = namedtuple('pmlayer', (
-    'fx1',
-    'fx2',
-    'fx3',
-    'fy1',
-    'fy2',
-    'fy3',
-    'gx2',
-    'gx3',
-    'gy2',
-    'gy3',
+    'fx1', 'fx2', 'fx3',
+    'fy1', 'fy2', 'fy3',
+    'gx2', 'gx3',
+    'gy2', 'gy3',
 ))
 
 
@@ -143,10 +141,10 @@ def pmlparam(nx: int, ny: int, npml: int, pml: pmlayer) -> None:
 
 def main():
 
-    nx: int = 60  # number of grid points
-    ny: int = 60  # number of grid points
+    nx: int = 100  # number of grid points
+    ny: int = 100  # number of grid points
 
-    ns: int = 115  # number of time steps
+    ns: int = 120  # number of time steps
 
     ezi = np.zeros(ny, dtype=np.float64)
     hxi = np.zeros(ny, dtype=np.float64)
@@ -192,8 +190,8 @@ def main():
         incthx(nx, ny, npml, ezi, hx)
         incthy(nx, ny, npml, ezi, hy)
 
-    surfaceplot(ns, nx, ny, ez)
-    contourplot(ns, nx, ny, ez)
+    surfaceplot(ns, nx, ny, npml, ez)
+    contourplot(ns, nx, ny, npml, ez)
 
 
 if __name__ == "__main__":
