@@ -20,41 +20,39 @@ plt.style.use("classic")
 plt.style.use("../pyplot.mplstyle")
 
 
-def surfaceplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
+def surfaceplot(ns: int, nx: int, ny: int, npml: int, ez: np.ndarray) -> None:
     fig, ax = plt.subplots(subplot_kw={"projection":"3d"})
     fig.suptitle(r"FDTD simulation of a plane wave in free space with PML")
-    yv, xv = np.meshgrid(range(ny), range(nx))
-    ax.plot_surface(xv, yv, ez, rstride=1, cstride=1, cmap="gray", lw=0.25)
+    yv, xv = np.meshgrid(range(ny), range(nx)); levels = [0.50,1.50]
+    pmlmsk = ((xv < npml)|(xv >= nx-npml)|(yv < npml)|(yv >= ny-npml))
+    ax.plot_surface(xv, yv, ez, rstride=1, cstride=1, cmap="gray", lw=10/nx)
+    ax.contourf(xv, yv, pmlmsk, levels, offset=0, colors="k", alpha=0.40)
     ax.text2D(0.1, 0.7, rf"$T$ = {ns}", transform=ax.transAxes)
     ax.set(xlim=(0, nx), ylim=(0, ny), zlim=(0, 1))
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$", zlabel=r"$E_z\;(V/m)$")
     ax.zaxis.set_rotate_label(False); ax.view_init(elev=20.0, azim=45)
-    plt.show()
+    plt.savefig("test_surface_3_3.png", dpi=100)
 
 
-def contourplot(ns: int, nx: int, ny: int, ez: np.ndarray) -> None:
+def contourplot(ns: int, nx: int, ny: int, npml: int, ez: np.ndarray) -> None:
     fig, ax = plt.subplots(figsize=(4,4), gridspec_kw={"hspace":0.2})
     fig.suptitle(r"FDTD simulation of a plane wave in free space with PML")
-    yv, xv = np.meshgrid(range(ny), range(nx))
-    ax.contourf(xv, yv, ez, cmap="gray", alpha=0.75)
-    ax.contour(xv, yv, ez, colors="k", linewidths=0.25)
+    yv, xv = np.meshgrid(range(ny), range(nx)); ezmax = np.abs(ez).max()
+    levels = np.linspace(-ezmax, ezmax, int(2/0.04))
+    pmlmsk = ((xv < npml)|(xv >= nx-npml)|(yv < npml)|(yv >= ny-npml))
+    ax.contour(xv, yv, ez, levels, cmap="gray", alpha=1.0, linewidths=1.5)
+    ax.contourf(xv, yv, pmlmsk, levels=[0.50,1.50], colors="k", alpha=0.40)
     ax.set(xlim=(0, nx-1), ylim=(0, ny-1), aspect="equal")
     ax.set(xlabel=r"$x\;(cm)$", ylabel=r"$y\;(cm)$")
     plt.subplots_adjust(bottom=0.2, hspace=0.45)
-    plt.show()
+    plt.savefig("test_contour_3_3.png", dpi=100)
 
 
 pmlayer = namedtuple('pmlayer', (
-    'fx1',
-    'fx2',
-    'fx3',
-    'fy1',
-    'fy2',
-    'fy3',
-    'gx2',
-    'gx3',
-    'gy2',
-    'gy3',
+    'fx1', 'fx2', 'fx3',
+    'fy1', 'fy2', 'fy3',
+    'gx2', 'gx3',
+    'gy2', 'gy3',
 ))
 
 
@@ -66,22 +64,16 @@ kernel = """
 
 
 typedef struct {
-    float *fx1;
-    float *fx2;
-    float *fx3;
-    float *fy1;
-    float *fy2;
-    float *fy3;
-    float *gx2;
-    float *gx3;
-    float *gy2;
-    float *gy3;
+    float *fx1, *fx2, *fx3;
+    float *fy1, *fy2, *fy3;
+    float *gx2, *gx3;
+    float *gy2, *gy3;
 } pmlayer;
 
 
 __device__
 float gaussian(int t, int t0, float sigma) {
-    return exp(-0.5*(t - t0)/sigma*(t - t0)/sigma);
+    return expf(-0.5f*(t - t0)/sigma*(t - t0)/sigma);
 }
 
 
@@ -89,7 +81,7 @@ __global__
 void ezinct(int ny, float *ezi, float *hxi, float *bc) {
     /* calculate the incident Ez */
     for (int j = idx+1; j < ny; j += stx) {
-        ezi[j] += 0.5 * (hxi[j-1] - hxi[j]);
+        ezi[j] += 0.5f * (hxi[j-1] - hxi[j]);
     }
     /* absorbing boundary conditions */
     if (idx == 0) ezi[0] = bc[0], bc[0] = bc[1], bc[1] = ezi[1];
@@ -103,7 +95,7 @@ void dfield(int t, int nx, int ny, pmlayer *pml, float *ezi, float *dz, float *h
     for (int i = idy+1; i < nx; i += sty) {
         for (int j = idx+1; j < ny; j += stx) {
             int n = i*ny+j;
-            dz[n] = pml->gx3[i] * pml->gy3[j] * dz[n] + pml->gx2[i] * pml->gy2[j] * 0.5 * (hy[n] - hy[n-ny] - hx[n] + hx[n-1]);
+            dz[n] = pml->gx3[i] * pml->gy3[j] * dz[n] + pml->gx2[i] * pml->gy2[j] * 0.5f * (hy[n] - hy[n-ny] - hx[n] + hx[n-1]);
         }
     }
     /* put a Gaussian pulse at the low end */
@@ -115,8 +107,8 @@ __global__
 void inctdz(int nx, int ny, int npml, float *hxi, float *dz) {
     /* incident Dz values */
     for (int i = idx+npml-1; i <= nx-npml; i += stx) {
-        dz[i*ny+(npml-1)] += 0.5 * hxi[npml-2];
-        dz[i*ny+(ny-npml)] -= 0.5 * hxi[ny-npml];
+        dz[i*ny+(npml-1)] += 0.5f * hxi[npml-2];
+        dz[i*ny+(ny-npml)] -= 0.5f * hxi[ny-npml];
     }
 }
 
@@ -137,7 +129,7 @@ __global__
 void hxinct(int ny, float *ezi, float *hxi) {
     /* calculate the incident Hx */
     for (int j = idx; j < ny-1; j += stx) {
-        hxi[j] += 0.5 * (ezi[j] - ezi[j+1]);
+        hxi[j] += 0.5f * (ezi[j] - ezi[j+1]);
     }
 }
 
@@ -150,8 +142,8 @@ void hfield(int nx, int ny, pmlayer *pml, float *ez, float *ihx, float *ihy, flo
             int n = i*ny+j;
             ihx[n] += ez[n] - ez[n+1];
             ihy[n] += ez[n] - ez[n+ny];
-            hx[n] = pml->fy3[j] * hx[n] + pml->fy2[j] * (0.5 * ez[n] - 0.5 * ez[n+1] + pml->fx1[i] * ihx[n]);
-            hy[n] = pml->fx3[i] * hy[n] - pml->fx2[i] * (0.5 * ez[n] - 0.5 * ez[n+ny] + pml->fy1[j] * ihy[n]);
+            hx[n] = pml->fy3[j] * hx[n] + pml->fy2[j] * (0.5f * ez[n] - 0.5f * ez[n+1] + pml->fx1[i] * ihx[n]);
+            hy[n] = pml->fx3[i] * hy[n] - pml->fx2[i] * (0.5f * ez[n] - 0.5f * ez[n+ny] + pml->fy1[j] * ihy[n]);
         }
     }
 }
@@ -161,8 +153,8 @@ __global__
 void incthx(int nx, int ny, int npml, float *ezi, float *hx) {
     /* incident Hx values */
     for (int i = idx+npml-1; i <= nx-npml; i += stx) {
-        hx[i*ny+(npml-2)] += 0.5 * ezi[npml-1];
-        hx[i*ny+(ny-npml)] -= 0.5 * ezi[ny-npml];
+        hx[i*ny+(npml-2)] += 0.5f * ezi[npml-1];
+        hx[i*ny+(ny-npml)] -= 0.5f * ezi[ny-npml];
     }
 }
 
@@ -171,8 +163,8 @@ __global__
 void incthy(int nx, int ny, int npml, float *ezi, float *hy) {
     /* incident Hy values */
     for (int j = idx+npml-1; j <= ny-npml; j += stx) {
-        hy[(npml-2)*ny+j] -= 0.5 * ezi[j];
-        hy[(nx-npml)*ny+j] += 0.5 * ezi[j];
+        hy[(npml-2)*ny+j] -= 0.5f * ezi[j];
+        hy[(nx-npml)*ny+j] += 0.5f * ezi[j];
     }
 }
 """
@@ -238,7 +230,7 @@ def main():
         pml.gy3.ptr,
     ], dtype=np.uint64)).gpudata
 
-    npml: int = np.int32(8)  # pml thickness
+    npml: int = np.int32(80)  # pml thickness
     pmlparam(nx, ny, npml, pml)
 
     ds: float = np.float32(0.01)  # spatial step (m)
@@ -286,8 +278,8 @@ def main():
     print(f"Total compute time on GPU: {time:.3f} s")
 
     print(ez[2*ny:2*ny+50])
-    surfaceplot(ns, nx, ny, ez.get().reshape(nx,ny))
-    contourplot(ns, nx, ny, ez.get().reshape(nx,ny))
+    surfaceplot(ns, nx, ny, npml, ez.get().reshape(nx,ny))
+    contourplot(ns, nx, ny, npml, ez.get().reshape(nx,ny))
 
 
 if __name__ == "__main__":
