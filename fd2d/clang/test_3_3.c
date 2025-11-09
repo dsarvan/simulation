@@ -12,21 +12,15 @@
 
 
 typedef struct {
-    float *fx1;
-    float *fx2;
-    float *fx3;
-    float *fy1;
-    float *fy2;
-    float *fy3;
-    float *gx2;
-    float *gx3;
-    float *gy2;
-    float *gy3;
+    float *fx1, *fx2, *fx3;
+    float *fy1, *fy2, *fy3;
+    float *gx2, *gx3;
+    float *gy2, *gy3;
 } pmlayer;
 
 
 float gaussian(int t, int t0, float sigma) {
-    return exp(-0.5*(t - t0)/sigma*(t - t0)/sigma);
+    return expf(-0.5f*(t - t0)/sigma*(t - t0)/sigma);
 }
 
 
@@ -34,7 +28,7 @@ void ezinct(int ny, float *ezi, float *hxi, float *bc) {
     /* calculate the incident Ez */
     #pragma omp parallel for
     for (int j = 1; j < ny; j++) {
-        ezi[j] += 0.5 * (hxi[j-1] - hxi[j]);
+        ezi[j] += 0.5f * (hxi[j-1] - hxi[j]);
     }
     /* absorbing boundary conditions */
     ezi[0] = bc[0], bc[0] = bc[1], bc[1] = ezi[1];
@@ -48,7 +42,7 @@ void dfield(int t, int nx, int ny, pmlayer *pml, float *ezi, float *dz, float *h
     for (int i = 1; i < nx; i++) {
         for (int j = 1; j < ny; j++) {
             int n = i*ny+j;
-            dz[n] = pml->gx3[i] * pml->gy3[j] * dz[n] + pml->gx2[i] * pml->gy2[j] * 0.5 * (hy[n] - hy[n-ny] - hx[n] + hx[n-1]);
+            dz[n] = pml->gx3[i] * pml->gy3[j] * dz[n] + pml->gx2[i] * pml->gy2[j] * 0.5f * (hy[n] - hy[n-ny] - hx[n] + hx[n-1]);
         }
     }
     /* put a Gaussian pulse at the low end */
@@ -60,8 +54,8 @@ void inctdz(int nx, int ny, int npml, float *hxi, float *dz) {
     /* incident Dz values */
     #pragma omp parallel for
     for (int i = npml-1; i <= nx-npml; i++) {
-        dz[i*ny+(npml-1)] += 0.5 * hxi[npml-2];
-        dz[i*ny+(ny-npml)] -= 0.5 * hxi[ny-npml];
+        dz[i*ny+(npml-1)] += 0.5f * hxi[npml-2];
+        dz[i*ny+(ny-npml)] -= 0.5f * hxi[ny-npml];
     }
 }
 
@@ -82,7 +76,7 @@ void hxinct(int ny, float *ezi, float *hxi) {
     /* calculate the incident Hx */
     #pragma omp parallel for
     for (int j = 0; j < ny-1; j++) {
-        hxi[j] += 0.5 * (ezi[j] - ezi[j+1]);
+        hxi[j] += 0.5f * (ezi[j] - ezi[j+1]);
     }
 }
 
@@ -95,8 +89,8 @@ void hfield(int nx, int ny, pmlayer *pml, float *ez, float *ihx, float *ihy, flo
             int n = i*ny+j;
             ihx[n] += ez[n] - ez[n+1];
             ihy[n] += ez[n] - ez[n+ny];
-            hx[n] = pml->fy3[j] * hx[n] + pml->fy2[j] * (0.5 * ez[n] - 0.5 * ez[n+1] + pml->fx1[i] * ihx[n]);
-            hy[n] = pml->fx3[i] * hy[n] - pml->fx2[i] * (0.5 * ez[n] - 0.5 * ez[n+ny] + pml->fy1[j] * ihy[n]);
+            hx[n] = pml->fy3[j] * hx[n] + pml->fy2[j] * (0.5f * ez[n] - 0.5f * ez[n+1] + pml->fx1[i] * ihx[n]);
+            hy[n] = pml->fx3[i] * hy[n] - pml->fx2[i] * (0.5f * ez[n] - 0.5f * ez[n+ny] + pml->fy1[j] * ihy[n]);
         }
     }
 }
@@ -106,8 +100,8 @@ void incthx(int nx, int ny, int npml, float *ezi, float *hx) {
     /* incident Hx values */
     #pragma omp parallel for
     for (int i = npml-1; i <= nx-npml; i++) {
-        hx[i*ny+(npml-2)] += 0.5 * ezi[npml-1];
-        hx[i*ny+(ny-npml)] -= 0.5 * ezi[ny-npml];
+        hx[i*ny+(npml-2)] += 0.5f * ezi[npml-1];
+        hx[i*ny+(ny-npml)] -= 0.5f * ezi[ny-npml];
     }
 }
 
@@ -116,8 +110,8 @@ void incthy(int nx, int ny, int npml, float *ezi, float *hy) {
     /* incident Hy values */
     #pragma omp parallel for
     for (int j = npml-1; j <= ny-npml; j++) {
-        hy[(npml-2)*ny+j] -= 0.5 * ezi[j];
-        hy[(nx-npml)*ny+j] += 0.5 * ezi[j];
+        hy[(npml-2)*ny+j] -= 0.5f * ezi[j];
+        hy[(nx-npml)*ny+j] += 0.5f * ezi[j];
     }
 }
 
@@ -125,8 +119,8 @@ void incthy(int nx, int ny, int npml, float *ezi, float *hy) {
 void pmlparam(int nx, int ny, int npml, pmlayer *pml) {
     /* calculate the two-dimensional perfectly matched layer (PML) parameters */
     for (int n = 0; n < npml; n++) {
-        float xm = 0.33*(npml-n)/npml*(npml-n)/npml*(npml-n)/npml;
-        float xn = 0.33*(npml-n-0.5)/npml*(npml-n-0.5)/npml*(npml-n-0.5)/npml;
+        float xm = 0.33f*(npml-n)/npml*(npml-n)/npml*(npml-n)/npml;
+        float xn = 0.33f*(npml-n-0.5f)/npml*(npml-n-0.5f)/npml*(npml-n-0.5f)/npml;
         pml->fx1[n] = pml->fx1[nx-2-n] = pml->fy1[n] = pml->fy1[ny-2-n] = xn;
         pml->fx2[n] = pml->fx2[nx-2-n] = pml->fy2[n] = pml->fy2[ny-2-n] = 1/(1+xn);
         pml->gx2[n] = pml->gx2[nx-1-n] = pml->gy2[n] = pml->gy2[ny-1-n] = 1/(1+xm);
@@ -185,11 +179,11 @@ int main() {
         pml.gy3[i] = 1.0f;
     }
 
-    int npml = 8;  /* pml thickness */
+    int npml = 80;  /* pml thickness */
     pmlparam(nx, ny, npml, &pml);
 
-    float ds = 0.01;  /* spatial step (m) */
-    float dt = ds/6e8;  /* time step (s) */
+    float ds = 0.01f;  /* spatial step (m) */
+    float dt = ds/6e8f;  /* time step (s) */
 
     float stime = omp_get_wtime();
 
