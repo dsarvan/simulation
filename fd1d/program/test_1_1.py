@@ -5,28 +5,31 @@
 
 """ Simulation of a pulse in free space """
 
-import matplotlib.pyplot as plt
-import numpy as np
 import time
+import numpy
+from matplotlib import pyplot
+from numpy.typing import NDArray
 
-plt.style.use("classic")
-plt.style.use("../pyplot.mplstyle")
+pyplot.style.use("classic")
+pyplot.style.use("pyplot.mplstyle")
+
+type F32Array = NDArray[numpy.float32]
 
 
-def visualize(ns: int, nx: int, ex: np.ndarray) -> None:
-    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
+def visualize(ns: int, nx: int, ex: F32Array):
+    fig, axs = pyplot.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
     fig.suptitle(r"FDTD simulation of a pulse in free space")
-    ax.plot(range(nx), ex, color="k", linewidth=1.0)
-    ax.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
-    ax.set(xticks=range(0, nx+1, int(np.ceil(nx/500)*50)))
-    ax.set(xlabel=r"$z\;(cm)$", ylabel=r"$E_x\;(V/m)$")
-    ax.text(0.02, 0.90, rf"$T$ = {ns}", transform=ax.transAxes)
-    plt.subplots_adjust(bottom=0.2, hspace=0.45)
-    plt.savefig("test_1_1.png", dpi=100)
+    axs.plot(range(nx), ex, color="k", linewidth=1.0)
+    axs.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
+    axs.set(xticks=range(0, nx+1, int(numpy.ceil(nx/500)*50)))
+    axs.set(xlabel=r"$z\;(cm)$", ylabel=r"$E_x\;(V/m)$")
+    axs.text(0.02, 0.90, rf"$T$ = {ns}", transform=axs.transAxes)
+    fig.subplots_adjust(bottom=0.2, hspace=0.45)
+    fig.savefig("test_1_1.png", dpi=100)
 
 
-def gaussian(t: int, t0: int, sigma: float) -> float:
-    return np.exp(-0.5*((t - t0)/sigma)**2)
+def gaussian(ts: int, t0: int, sigma: float):
+    return numpy.exp(-0.5*((ts - t0)/sigma)**2)
 
 
 def main():
@@ -34,16 +37,16 @@ def main():
     nx: int = 38000  # number of grid points
     ns: int = 40000  # number of time steps
 
-    ex = np.zeros(nx, dtype=np.float32)
-    hy = np.zeros(nx, dtype=np.float32)
+    ex = numpy.zeros(nx, numpy.float32)
+    hy = numpy.zeros(nx, numpy.float32)
 
     stime = time.perf_counter()
 
-    for t in np.arange(1, ns+1).astype(np.int32):
+    for ts in map(int,range(1,ns+1)):
         # calculate the Ex field
         ex[1:nx] += 0.5 * (hy[0:nx-1] - hy[1:nx])
         # put a Gaussian pulse in the middle
-        ex[nx//2] = gaussian(t, 40, 12.0)
+        ex[nx//2] = gaussian(ts, 40, 12.0)
         # calculate the Hy field
         hy[0:nx-1] += 0.5 * (ex[0:nx-1] - ex[1:nx])
 
