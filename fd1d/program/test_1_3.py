@@ -5,35 +5,38 @@
 
 """ Simulation of a pulse hitting a dielectric medium """
 
-import matplotlib.pyplot as plt
-import numpy as np
 import time
+import numpy
+from matplotlib import pyplot
+from numpy.typing import NDArray
 
-plt.style.use("classic")
-plt.style.use("../pyplot.mplstyle")
+pyplot.style.use("classic")
+pyplot.style.use("pyplot.mplstyle")
+
+type F32Array = NDArray[numpy.float32]
 
 
-def visualize(ns: int, nx: int, epsr: float, cb: np.ndarray, ex: np.ndarray) -> None:
-    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
+def visualize(ns: int, nx: int, epsr: float, cb: F32Array, ex: F32Array):
+    fig, axs = pyplot.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
     fig.suptitle(r"FDTD simulation of a pulse striking dielectric material")
-    medium = np.where(0.5/cb-1)[0] if epsr > 1 else (0.5/cb-1)
-    ax.plot(range(nx), ex, color="k", linewidth=1.0)
-    ax.axvspan(medium[0], medium[-1], color="y", alpha=0.3)
-    ax.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
-    ax.set(xticks=range(0, nx+1, int(np.ceil(nx/500)*50)))
-    ax.set(xlabel=r"$z\;(cm)$", ylabel=r"$E_x\;(V/m)$")
-    ax.text(0.02, 0.90, rf"$T$ = {ns}", transform=ax.transAxes)
-    ax.text(0.90, 0.90, rf"$\epsilon_r$ = {epsr}", transform=ax.transAxes)
-    plt.subplots_adjust(bottom=0.2, hspace=0.45)
-    plt.savefig("test_1_3.png", dpi=100)
+    medium = numpy.where(0.5/cb-1)[0] if epsr > 1 else (0.5/cb-1)
+    axs.plot(range(nx), ex, color="k", linewidth=1.0)
+    axs.axvspan(medium[0], medium[-1], color="y", alpha=0.3)
+    axs.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
+    axs.set(xticks=range(0, nx+1, int(numpy.ceil(nx/500)*50)))
+    axs.set(xlabel=r"$z\;(cm)$", ylabel=r"$E_x\;(V/m)$")
+    axs.text(0.02, 0.90, rf"$T$ = {ns}", transform=axs.transAxes)
+    axs.text(0.90, 0.90, rf"$\epsilon_r$ = {epsr}", transform=axs.transAxes)
+    fig.subplots_adjust(bottom=0.2, hspace=0.45)
+    fig.savefig("test_1_3.png", dpi=100)
 
 
-def gaussian(t: int, t0: int, sigma: float) -> float:
-    return np.exp(-0.5*((t - t0)/sigma)**2)
+def gaussian(ts: int, t0: int, sigma: float):
+    return numpy.exp(-0.5*((ts - t0)/sigma)**2)
 
 
-def dielectric(nx: int, epsr: float) -> np.ndarray:
-    cb = 0.5 + np.zeros(nx, dtype=np.float32)
+def dielectric(nx: int, epsr: float):
+    cb = 0.5 + numpy.zeros(nx, numpy.float32)
     cb[nx//2:] = 0.5/epsr
     return cb
 
@@ -43,21 +46,21 @@ def main():
     nx: int = 38000  # number of grid points
     ns: int = 40000  # number of time steps
 
-    ex = np.zeros(nx, dtype=np.float32)
-    hy = np.zeros(nx, dtype=np.float32)
+    ex = numpy.zeros(nx, numpy.float32)
+    hy = numpy.zeros(nx, numpy.float32)
 
-    bc = np.zeros(4, dtype=np.float32)
+    bc = numpy.zeros(4, numpy.float32)
 
     epsr: float = 4.0  # relative permittivity
-    cb: np.ndarray = dielectric(nx, epsr)
+    cb: F32Array = dielectric(nx, epsr)
 
     stime = time.perf_counter()
 
-    for t in np.arange(1, ns+1).astype(np.int32):
+    for ts in map(int,range(1,ns+1)):
         # calculate the Ex field
         ex[1:nx] += cb[1:nx] * (hy[0:nx-1] - hy[1:nx])
         # put a Gaussian pulse at the low end
-        ex[1] += gaussian(t, 40, 12.0)
+        ex[1] += gaussian(ts, 40, 12.0)
         # absorbing boundary conditions
         ex[0], bc[0], bc[1] = bc[0], bc[1], ex[1]
         ex[nx-1], bc[3], bc[2] = bc[3], bc[2], ex[nx-2]
