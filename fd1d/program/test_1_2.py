@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# File: test_1_2.py
+# File: test12.py
 # Name: D.Saravanan
 # Date: 19/10/2021
 
@@ -17,7 +17,7 @@ type F32Array = NDArray[numpy.float32]
 
 
 def visualize(ns: int, nx: int, ex: F32Array):
-    fig, axs = pyplot.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
+    fig, axs = pyplot.subplots(figsize=(8,3), frameon=True)
     fig.suptitle(r"FDTD simulation of a pulse with absorbing boundary conditions")
     axs.plot(range(nx), ex, color="k", linewidth=1.0)
     axs.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
@@ -25,7 +25,7 @@ def visualize(ns: int, nx: int, ex: F32Array):
     axs.set(xlabel=r"$z\;(cm)$", ylabel=r"$E_x\;(V/m)$")
     axs.text(0.02, 0.90, rf"$T$ = {ns}", transform=axs.transAxes)
     fig.subplots_adjust(bottom=0.2, hspace=0.45)
-    fig.savefig("test_1_2.png", dpi=100)
+    fig.savefig("test12.png", dpi=100)
 
 
 def gaussian(ts: int, t0: int, sigma: float):
