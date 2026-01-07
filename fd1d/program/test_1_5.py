@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# File: test_1_5.py
+# File: test15.py
 # Name: D.Saravanan
 # Date: 29/10/2021
 
@@ -19,7 +19,7 @@ type F32Array = NDArray[numpy.float32]
 
 
 def visualize(ns: int, nx: int, epsr: float, sigma: float, cb: F32Array, ex: F32Array):
-    fig, axs = pyplot.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
+    fig, axs = pyplot.subplots(figsize=(8,3), frameon=True)
     fig.suptitle(r"FDTD simulation of a sinusoidal striking lossy dielectric material")
     medium = numpy.where(0.5/cb-1)[0] if epsr > 1 else (0.5/cb-1)
     axs.plot(range(nx), ex, color="k", linewidth=1.0)
@@ -31,7 +31,7 @@ def visualize(ns: int, nx: int, epsr: float, sigma: float, cb: F32Array, ex: F32
     axs.text(0.90, 0.90, rf"$\epsilon_r$ = {epsr}", transform=axs.transAxes)
     axs.text(0.85, 0.80, rf"$\sigma$ = {sigma} $S/m$", transform=axs.transAxes)
     fig.subplots_adjust(bottom=0.2, hspace=0.45)
-    fig.savefig("test_1_5.png", dpi=100)
+    fig.savefig("test15.png", dpi=100)
 
 
 def sinusoidal(ts: int, ds: float, freq: float):
@@ -40,8 +40,8 @@ def sinusoidal(ts: int, ds: float, freq: float):
 
 
 def dielectric(nx: int, dt: float, epsr: float, sigma: float):
-    ca = 1.0 + numpy.zeros(nx, numpy.float32)
-    cb = 0.5 + numpy.zeros(nx, numpy.float32)
+    ca = numpy.full(nx, 1.0, numpy.float32)
+    cb = numpy.full(nx, 0.5, numpy.float32)
     eps0: float = 8.854e-12  # vacuum permittivity (F/m)
     epsf: float = dt*sigma/(2*eps0*epsr)
     ca[nx//2:] = (1 - epsf)/(1 + epsf)
