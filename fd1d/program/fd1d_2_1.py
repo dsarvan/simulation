@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# File: fd1d_2_1.py
+# File: fdtd21.py
 # Name: D.Saravanan
 # Date: 25/11/2021
 
@@ -19,7 +19,7 @@ type F64Array = NDArray[numpy.float64]
 
 
 def visualize(ns: int, nx: int, epsr: float, sigma: float, nax: F64Array, ex: F64Array):
-    fig, axs = pyplot.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
+    fig, axs = pyplot.subplots(figsize=(8,3), frameon=True)
     fig.suptitle(r"FDTD simulation of a sinusoidal striking lossy dielectric material")
     medium = numpy.where(1.0/nax-1)[0] if epsr > 1 else (1.0/nax-1)
     axs.plot(range(nx), ex, color="k", linewidth=1.0)
@@ -31,7 +31,7 @@ def visualize(ns: int, nx: int, epsr: float, sigma: float, nax: F64Array, ex: F6
     axs.text(0.90, 0.90, rf"$\epsilon_r$ = {epsr}", transform=axs.transAxes)
     axs.text(0.85, 0.80, rf"$\sigma$ = {sigma} $S/m$", transform=axs.transAxes)
     fig.subplots_adjust(bottom=0.2, hspace=0.45)
-    fig.savefig("fd1d_2_1.png", dpi=100)
+    fig.savefig("fdtd21.png", dpi=100)
 
 
 Medium = NamedTuple('Medium',[
