@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# File: test_2_2.py
+# File: test22.py
 # Name: D.Saravanan
 # Date: 07/12/2021
 
@@ -20,7 +20,7 @@ type F32Array = NDArray[numpy.float32]
 
 
 def visualize(ns: int, nx: int, epsr: float, sigma: float, nax: F32Array, ex: F32Array):
-    fig, axs = pyplot.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
+    fig, axs = pyplot.subplots(figsize=(8,3), frameon=True)
     fig.suptitle(r"FDTD simulation of a pulse striking dielectric material")
     medium = numpy.where(1.0/nax-1)[0] if epsr > 1 else (1.0/nax-1)
     axs.plot(range(nx), ex, color="k", linewidth=1.0)
@@ -32,11 +32,11 @@ def visualize(ns: int, nx: int, epsr: float, sigma: float, nax: F32Array, ex: F3
     axs.text(0.90, 0.90, rf"$\epsilon_r$ = {epsr}", transform=axs.transAxes)
     axs.text(0.85, 0.80, rf"$\sigma$ = {sigma} $S/m$", transform=axs.transAxes)
     fig.subplots_adjust(bottom=0.2, hspace=0.45)
-    fig.savefig("test_2_2.png", dpi=100)
+    fig.savefig("test22.png", dpi=100)
 
 
 def amplitude(ns: int, nx: int, epsr: float, sigma: float, nax: F32Array, amp: F32Array):
-    fig, axs = pyplot.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
+    fig, axs = pyplot.subplots(figsize=(8,3), frameon=True)
     fig.suptitle(r"The discrete Fourier transform with pulse as its source")
     medium = numpy.where(1.0/nax-1)[0] if epsr > 1 else (1.0/nax-1)
     axs.plot(range(nx), amp, color="k", linewidth=1.0)
@@ -48,7 +48,7 @@ def amplitude(ns: int, nx: int, epsr: float, sigma: float, nax: F32Array, amp: F
     axs.text(0.90, 0.90, rf"$\epsilon_r$ = {epsr}", transform=axs.transAxes)
     axs.text(0.85, 0.80, rf"$\sigma$ = {sigma} $S/m$", transform=axs.transAxes)
     fig.subplots_adjust(bottom=0.2, hspace=0.45)
-    fig.savefig("test_amp_2_2.png", dpi=100)
+    fig.savefig("testamplt22.png", dpi=100)
 
 
 Medium = NamedTuple('Medium',[
@@ -126,7 +126,7 @@ def main():
     md: Medium = dielectric(nx, dt, epsr, sigma)
 
     # frequency 100 MHz, 200 MHz, 500 MHz
-    freq = numpy.array(([100e6], [200e6], [500e6]), numpy.float32)
+    freq = numpy.array(([100e6],[200e6],[500e6]), numpy.float32)
     nf: int = len(freq)  # number of frequencies
 
     ft = FTrans(
