@@ -1,25 +1,29 @@
 #!/usr/bin/env python
-# File: fd1d_1_4.py
+# File: fdtd14.py
 # Name: D.Saravanan
 # Date: 22/10/2021
 
 """ Simulation of a propagating sinusoidal striking a dielectric medium """
 
-import matplotlib.animation as animation
-import matplotlib.pyplot as plt
-import numpy as np
+import numpy
+from numpy import pi, sin
+from matplotlib import pyplot
+from matplotlib import animation
+from numpy.typing import NDArray
 
-plt.style.use("classic")
-plt.style.use("../pyplot.mplstyle")
+pyplot.style.use("classic")
+pyplot.style.use("pyplot.mplstyle")
+
+type F64Array = NDArray[numpy.float64]
 
 
-def sinusoidal(t: int, ds: float, freq: float) -> float:
+def sinusoidal(ts: int, ds: float, freq: float):
     dt: float = ds/6e8  # time step (s)
-    return np.sin(2*np.pi*freq*dt*t)
+    return sin(2*pi*freq*dt*ts)
 
 
-def dielectric(nx: int, epsr: float) -> np.ndarray:
-    cb = 0.5 + np.zeros(nx, dtype=np.float64)
+def dielectric(nx: int, epsr: float):
+    cb = numpy.full(nx, 0.5, numpy.float64)
     cb[nx//2:] = 0.5/epsr
     return cb
 
@@ -29,40 +33,41 @@ def main():
     nx: int = 512  # number of grid points
     ns: int = 740  # number of time steps
 
-    ex = np.zeros(nx, dtype=np.float64)
-    hy = np.zeros(nx, dtype=np.float64)
+    ex = numpy.zeros(nx, numpy.float64)
+    hy = numpy.zeros(nx, numpy.float64)
 
-    bc = np.zeros(4, dtype=np.float64)
+    bc = numpy.zeros(4, numpy.float64)
 
     ds: float = 0.01  # spatial step (m)
     dt: float = ds/6e8  # time step (s)
     epsr: float = 4.0  # relative permittivity
-    cb: np.ndarray = dielectric(nx, epsr)
+    cb: F64Array = dielectric(nx, epsr)
 
     # define the meta data for the movie
     fwriter = animation.writers["ffmpeg"]
     data = {"title": "Simulation of a sinusoidal hitting dielectric medium"}
-    writer = fwriter(fps=15, codec='h264', bitrate=2000, metadata=data)
+    args = ['-vcodec','libx264','-crf','17','-pix_fmt','yuv420p','-tune','animation']
+    writer = fwriter(fps=30, codec='h264', metadata=data, extra_args=args)
 
     # draw an empty plot, but preset the plot x- and y- limits
-    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
+    fig, axs = pyplot.subplots(figsize=(8,3), frameon=True)
     fig.suptitle(r"FDTD simulation of a sinusoidal striking dielectric material")
-    medium = np.where(0.5/cb-1)[0] if epsr > 1 else (0.5/cb-1)
-    axline, = ax.plot(range(nx), ex, color="k", linewidth=1.0)
-    ax.axvspan(medium[0], medium[-1], color="y", alpha=0.3)
-    ax.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
-    ax.set(xticks=range(0, nx+1, int(np.ceil(nx/500)*25)))
-    ax.set(xlabel=r"$z\;(cm)$", ylabel=r"$E_x\;(V/m)$")
-    axtime = ax.text(0.02, 0.90, "", transform=ax.transAxes)
-    axepsr = ax.text(0.90, 0.90, "", transform=ax.transAxes)
-    plt.subplots_adjust(bottom=0.2, hspace=0.45)
+    medium = numpy.where(0.5/cb-1)[0] if epsr > 1 else (0.5/cb-1)
+    axline, = axs.plot(range(nx), ex, color="k", linewidth=1.0)
+    axs.axvspan(medium[0], medium[-1], color="y", alpha=0.3)
+    axs.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
+    axs.set(xticks=range(0, nx+1, int(numpy.ceil(nx/500)*25)))
+    axs.set(xlabel=r"$z\;(cm)$", ylabel=r"$E_x\;(V/m)$")
+    axtime = axs.text(0.02, 0.90, "", transform=axs.transAxes)
+    axepsr = axs.text(0.90, 0.90, "", transform=axs.transAxes)
+    fig.subplots_adjust(bottom=0.2, hspace=0.45)
 
-    with writer.saving(fig, "fd1d_1_4.mp4", 300):
-        for t in np.arange(1, ns+1).astype(np.int32):
+    with writer.saving(fig, "fdtd14.mp4", 300):
+        for ts in map(int,range(1,ns+1)):
             # calculate the Ex field
             ex[1:nx] += cb[1:nx] * (hy[0:nx-1] - hy[1:nx])
             # put a sinusoidal wave at the low end
-            ex[1] += sinusoidal(t, 0.01, 700e6)
+            ex[1] += sinusoidal(ts, 0.01, 700e6)
             # absorbing boundary conditions
             ex[0], bc[0], bc[1] = bc[0], bc[1], ex[1]
             ex[nx-1], bc[3], bc[2] = bc[3], bc[2], ex[nx-2]
@@ -70,9 +75,11 @@ def main():
             hy[0:nx-1] += 0.5 * (ex[0:nx-1] - ex[1:nx])
 
             axline.set_ydata(ex)
-            axtime.set_text(rf"$T$ = {t}")
+            axtime.set_text(rf"$T$ = {ts}")
             axepsr.set_text(rf"$\epsilon_r$ = {epsr}")
             writer.grab_frame()
+
+    pyplot.close(fig)
 
 
 if __name__ == "__main__":
