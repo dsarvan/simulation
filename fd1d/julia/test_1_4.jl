@@ -1,41 +1,43 @@
 #!/usr/bin/env julia
-# File: test_1_4.jl
+# File: test14.jl
 # Name: D.Saravanan
 # Date: 26/02/2025
 
 """ Simulation of a propagating sinusoidal striking a dielectric medium """
 
-import PyPlot as plt
+import PyPlot as pyplot
 using Printf
 
-plt.matplotlib.style.use("classic")
-plt.matplotlib.style.use("../pyplot.mplstyle")
+pyplot.matplotlib.style.use("classic")
+pyplot.matplotlib.style.use("pyplot.mplstyle")
+
+const F32Array = Array{Float32}
 
 
-function visualize(ns::Int, nx::Int, epsr::Float32, cb::Array{Float32}, ex::Array{Float32})::Nothing
-    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw=Dict("hspace"=>0.2))
+function visualize(ns::Int, nx::Int, epsr::Float32, cb::F32Array, ex::F32Array)
+    fig, axs = pyplot.subplots(figsize=(8,3), frameon=true)
     fig.suptitle("FDTD simulation of a sinusoidal striking dielectric material")
     medium = epsr > 1 ? findall(x->x!=0,0.5./cb.-1) : 0.5./cb.-1
-    ax.plot(0:nx-1, ex, color="k", linewidth=1.0)
-    ax.axvspan(medium[1], medium[end], color="y", alpha=0.3)
-    ax.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
-    ax.set(xticks=0:Int(ceil(nx/500)*50):nx)
-    ax.set(xlabel="\$z\\;(cm)\$", ylabel="\$E_x\\;(V/m)\$")
-    ax.text(0.02, 0.90, "\$T\$ = $ns", transform=ax.transAxes)
-    ax.text(0.90, 0.90, "\$\\epsilon_r\$ = $epsr", transform=ax.transAxes)
-    plt.subplots_adjust(bottom=0.2, hspace=0.45)
-    plt.savefig("test_1_4.png", dpi=100)
+    axs.plot(0:nx-1, ex, color="k", linewidth=1.0)
+    axs.axvspan(medium[1], medium[end], color="y", alpha=0.3)
+    axs.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
+    axs.set(xticks=0:Int(ceil(nx/500)*50):nx)
+    axs.set(xlabel="\$z\\;(cm)\$", ylabel="\$E_x\\;(V/m)\$")
+    axs.text(0.02, 0.90, "\$T\$ = $ns", transform=axs.transAxes)
+    axs.text(0.90, 0.90, "\$\\epsilon_r\$ = $epsr", transform=axs.transAxes)
+    fig.subplots_adjust(bottom=0.2, hspace=0.45)
+    fig.savefig("test14.png", dpi=100)
 end
 
 
-function sinusoidal(t::Int32, ds::Float32, freq::Float32)::Float32
+function sinusoidal(ts::Int, ds::Float32, freq::Float32)
     dt::Float32 = ds/6e8  # time step (s)
-    return sin(2*pi*freq*dt*t)
+    return sin(2*pi*freq*dt*ts)
 end
 
 
-function dielectric(nx::Int, epsr::Float32)::Array{Float32}
-    cb = 0.5f0 .+ zeros(Float32, nx)
+function dielectric(nx::Int, epsr::Float32)
+    cb = fill(0.5f0::Float32, nx)
     cb[nx÷2+1:nx] .= 0.5/epsr
     return cb
 end
@@ -54,15 +56,15 @@ function main()
     ds::Float32 = 0.01  # spatial step (m)
     dt::Float32 = ds/6e8  # time step (s)
     epsr::Float32 = 4.0  # relative permittivity
-    cb::Array{Float32} = dielectric(nx, epsr)
+    cb::F32Array = dielectric(nx, epsr)
 
     stime = time_ns()
 
-    for t in Int32.(1:ns)
+    for ts in map(Int,1:ns)
         # calculate the Ex field
         @views ex[2:nx] .+= cb[2:nx] .* (hy[1:nx-1] .- hy[2:nx])
         # put a sinusoidal wave at the low end
-        ex[2] += sinusoidal(t, 0.01f0, 700f6)
+        ex[2] += sinusoidal(ts, 0.01f0, 700f6)
         # absorbing boundary conditions
         ex[1], bc[1], bc[2] = bc[1], bc[2], ex[2]
         ex[nx], bc[4], bc[3] = bc[4], bc[3], ex[nx-1]
