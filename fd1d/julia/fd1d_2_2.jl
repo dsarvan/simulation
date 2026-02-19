@@ -1,96 +1,96 @@
 #!/usr/bin/env julia
-# File: fd1d_2_2.jl
+# File: fdtd22.jl
 # Name: D.Saravanan
 # Date: 01/03/2025
 
 """ Simulation of a pulse striking a dielectric medium and implements
 the discrete Fourier transform with a Gaussian pulse as its source """
 
-import PyPlot as plt
+import PyPlot as pyplot
+using Base:@kwdef
 
-plt.matplotlib.style.use("classic")
-plt.matplotlib.style.use("../pyplot.mplstyle")
+pyplot.matplotlib.style.use("classic")
+pyplot.matplotlib.style.use("pyplot.mplstyle")
+
+const F64Array = Array{Float64}
 
 
-function visualize(ns::Int, nx::Int, epsr::Float64, sigma::Float64, nax::Array{Float64}, ex::Array{Float64})::Nothing
-    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw=Dict("hspace"=>0.2))
+function visualize(ns::Int, nx::Int, epsr::Float64, sigma::Float64, nax::F64Array, ex::F64Array)
+    fig, axs = pyplot.subplots(figsize=(8,3), frameon=true)
     fig.suptitle("FDTD simulation of a pulse striking dielectric material")
     medium = epsr > 1 ? findall(x->x!=0,1.0./nax.-1) : 1.0./nax.-1
-    ax.plot(0:nx-1, ex, color="k", linewidth=1.0)
-    ax.axvspan(medium[1], medium[end], color="y", alpha=0.3)
-    ax.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
-    ax.set(xticks=0:Int(ceil(nx/500)*25):nx)
-    ax.set(xlabel="\$z\\;(cm)\$", ylabel="\$E_x\\;(V/m)\$")
-    ax.text(0.02, 0.90, "\$T\$ = $ns", transform=ax.transAxes)
-    ax.text(0.90, 0.90, "\$\\epsilon_r\$ = $epsr", transform=ax.transAxes)
-    ax.text(0.85, 0.80, "\$\\sigma\$ = $sigma \$S/m\$", transform=ax.transAxes)
-    plt.subplots_adjust(bottom=0.2, hspace=0.45)
-    plt.savefig("fd1d_2_2.png", dpi=100)
+    axs.plot(0:nx-1, ex, color="k", linewidth=1.0)
+    axs.axvspan(medium[1], medium[end], color="y", alpha=0.3)
+    axs.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
+    axs.set(xticks=0:Int(ceil(nx/500)*25):nx)
+    axs.set(xlabel="\$z\\;(cm)\$", ylabel="\$E_x\\;(V/m)\$")
+    axs.text(0.02, 0.90, "\$T\$ = $ns", transform=axs.transAxes)
+    axs.text(0.90, 0.90, "\$\\epsilon_r\$ = $epsr", transform=axs.transAxes)
+    axs.text(0.85, 0.80, "\$\\sigma\$ = $sigma \$S/m\$", transform=axs.transAxes)
+    fig.subplots_adjust(bottom=0.2, hspace=0.45)
+    fig.savefig("fdtd22.png", dpi=100)
 end
 
 
-function amplitude(ns::Int, nx::Int, epsr::Float64, sigma::Float64, nax::Array{Float64}, amp::Array{Float64})::Nothing
-    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw=Dict("hspace"=>0.2))
+function amplitude(ns::Int, nx::Int, epsr::Float64, sigma::Float64, nax::F64Array, amp::F64Array)
+    fig, axs = pyplot.subplots(figsize=(8,3), frameon=true)
     fig.suptitle("The discrete Fourier transform with pulse as its source")
     medium = epsr > 1 ? findall(x->x!=0,1.0./nax.-1) : 1.0./nax.-1
-    ax.plot(0:nx-1, amp, color="k", linewidth=1.0)
-    ax.axvspan(medium[1], medium[end], color="y", alpha=0.3)
-    ax.set(xlim=(0, nx-1), ylim=(-0.2, 2.2))
-    ax.set(xticks=0:Int(ceil(nx/500)*25):nx)
-    ax.set(xlabel="\$z\\;(cm)\$", ylabel="\$Amplitude\$")
-    ax.text(0.02, 0.90, "\$T\$ = $ns", transform=ax.transAxes)
-    ax.text(0.90, 0.90, "\$\\epsilon_r\$ = $epsr", transform=ax.transAxes)
-    ax.text(0.85, 0.80, "\$\\sigma\$ = $sigma \$S/m\$", transform=ax.transAxes)
-    plt.subplots_adjust(bottom=0.2, hspace=0.45)
-    plt.savefig("fd1d_amp_2_2.png", dpi=100)
+    axs.plot(0:nx-1, amp, color="k", linewidth=1.0)
+    axs.axvspan(medium[1], medium[end], color="y", alpha=0.3)
+    axs.set(xlim=(0, nx-1), ylim=(-0.2, 2.2))
+    axs.set(xticks=0:Int(ceil(nx/500)*25):nx)
+    axs.set(xlabel="\$z\\;(cm)\$", ylabel="\$Amplitude\$")
+    axs.text(0.02, 0.90, "\$T\$ = $ns", transform=axs.transAxes)
+    axs.text(0.90, 0.90, "\$\\epsilon_r\$ = $epsr", transform=axs.transAxes)
+    axs.text(0.85, 0.80, "\$\\sigma\$ = $sigma \$S/m\$", transform=axs.transAxes)
+    fig.subplots_adjust(bottom=0.2, hspace=0.45)
+    fig.savefig("fdtdamplt22.png", dpi=100)
 end
 
 
-struct medium
-    nax::Array{Float64}
-    nbx::Array{Float64}
+@kwdef struct Medium
+    nax::F64Array; nbx::F64Array;
 end
 
 
-struct ftrans
-    r_pt::Array{Float64}
-    i_pt::Array{Float64}
-    r_in::Array{Float64}
-    i_in::Array{Float64}
+@kwdef struct FTrans
+    rpt::F64Array; ipt::F64Array;
+    rin::F64Array; iin::F64Array;
 end
 
 
-function gaussian(t::Int32, t0::Int, sigma::Float64)::Float64
-    return exp(-0.5*((t - t0)/sigma)^2)
+function gaussian(ts::Int, t0::Int, sigma::Float64)
+    return exp(-0.5*((ts - t0)/sigma)^2)
 end
 
 
-function fourier(t::Int32, nf::Int, nx::Int, dt::Float64, freq::Array{Float64}, ex::Array{Float64}, ft::ftrans)
+function fourier(ts::Int, nf::Int, nx::Int, dt::Float64, freq::F64Array, ex::F64Array, ft::FTrans)
     # calculate the Fourier transform of input source
-    @views ft.r_in[1:nf] .+= cos.(2*pi*freq[1:nf]*dt*t) .* ex[11]
-    @views ft.i_in[1:nf] .-= sin.(2*pi*freq[1:nf]*dt*t) .* ex[11]
+    @views ft.rin[1:nf] .+= cos.(2*pi*freq[1:nf]*dt*ts) .* ex[11]
+    @views ft.iin[1:nf] .-= sin.(2*pi*freq[1:nf]*dt*ts) .* ex[11]
     # calculate the Fourier transform of Ex field
-    @views ft.r_pt[1:nf,1:nx] .+= cos.(2*pi*freq[1:nf]*dt*t) .* ex[1:nx]'
-    @views ft.i_pt[1:nf,1:nx] .-= sin.(2*pi*freq[1:nf]*dt*t) .* ex[1:nx]'
+    @views ft.rpt[1:nf,1:nx] .+= cos.(2*pi*freq[1:nf]*dt*ts) .* ex[1:nx]'
+    @views ft.ipt[1:nf,1:nx] .-= sin.(2*pi*freq[1:nf]*dt*ts) .* ex[1:nx]'
 end
 
 
-function dxfield(t::Int32, nx::Int, dx::Array{Float64}, hy::Array{Float64})
+function dxfield(ts::Int, nx::Int, hy::F64Array, dx::F64Array)
     # calculate the electric flux density Dx
     @views dx[2:nx] .+= 0.5 .* (hy[1:nx-1] .- hy[2:nx])
     # put a Gaussian pulse at the low end
-    dx[2] += gaussian(t, 50, 10.0)
+    dx[2] += gaussian(ts, 50, 10.0)
 end
 
 
-function exfield(nx::Int, md::medium, dx::Array{Float64}, ix::Array{Float64}, ex::Array{Float64})
+function exfield(nx::Int, md::Medium, ix::F64Array, dx::F64Array, ex::F64Array)
     # calculate the Ex field from Dx
     @views ex[2:nx] .= md.nax[2:nx] .* (dx[2:nx] .- ix[2:nx])
     @views ix[2:nx] .+= md.nbx[2:nx] .* ex[2:nx]
 end
 
 
-function hyfield(nx::Int, ex::Array{Float64}, hy::Array{Float64}, bc::Array{Float64})
+function hyfield(nx::Int, bc::F64Array, ex::F64Array, hy::F64Array)
     # absorbing boundary conditions
     ex[1], bc[1], bc[2] = bc[1], bc[2], ex[2]
     ex[nx], bc[4], bc[3] = bc[4], bc[3], ex[nx-1]
@@ -99,10 +99,10 @@ function hyfield(nx::Int, ex::Array{Float64}, hy::Array{Float64}, bc::Array{Floa
 end
 
 
-function dielectric(nx::Int, dt::Float64, epsr::Float64, sigma::Float64)::medium
-    md = medium(
-        fill(1.0::Float64, nx),
-        fill(0.0::Float64, nx),
+function dielectric(nx::Int, dt::Float64, epsr::Float64, sigma::Float64)
+    md = Medium(
+        nax = fill(1.0::Float64, nx),
+        nbx = fill(0.0::Float64, nx),
     )
     eps0::Float64 = 8.854e-12  # vaccum permittivity (F/m)
     md.nax[nx÷2+1:nx] .= 1/(epsr + sigma*dt/eps0)
@@ -127,32 +127,32 @@ function main()
     dt::Float64 = ds/6e8  # time step (s)
     epsr::Float64 = 4.0  # relative permittivity
     sigma::Float64 = 0.0  # conductivity (S/m)
-    md::medium = dielectric(nx, dt, epsr, sigma)
+    md::Medium = dielectric(nx, dt, epsr, sigma)
 
     # frequency 100 MHz, 200 MHz, 500 MHz
     freq = Float64[100e6, 200e6, 500e6]
     nf::Int = length(freq)  # number of frequencies
 
-    ft = ftrans(
-        zeros(Float64, (nf, nx)),
-        zeros(Float64, (nf, nx)),
-        zeros(Float64, (nf, 1)),
-        zeros(Float64, (nf, 1)),
+    ft = FTrans(
+        rpt = zeros(Float64, (nf,nx)),
+        ipt = zeros(Float64, (nf,nx)),
+        rin = zeros(Float64, (nf, 1)),
+        iin = zeros(Float64, (nf, 1)),
     )
 
-    amplt = zeros(Float64, (nf, nx))
-    phase = zeros(Float64, (nf, nx))
+    amplt = zeros(Float64, (nf,nx))
+    phase = zeros(Float64, (nf,nx))
 
-    for t in Int32.(1:ns)
-        dxfield(t, nx, dx, hy)
-        exfield(nx, md, dx, ix, ex)
-        fourier(t, nf, nx, dt, freq, ex, ft)
-        hyfield(nx, ex, hy, bc)
+    for ts in map(Int,1:ns)
+        dxfield(ts, nx, hy, dx)
+        exfield(nx, md, ix, dx, ex)
+        fourier(ts, nf, nx, dt, freq, ex, ft)
+        hyfield(nx, bc, ex, hy)
     end
 
     # calculate the amplitude and phase at each frequency
-    amplt = hypot.(ft.r_in,ft.i_in).\1 .* hypot.(ft.r_pt,ft.i_pt)
-    phase = atan.(ft.i_pt,ft.r_pt) .- atan.(ft.i_in,ft.r_in)
+    amplt = hypot.(ft.rin,ft.iin).\1 .* hypot.(ft.rpt,ft.ipt)
+    phase = atan.(ft.ipt,ft.rpt) .- atan.(ft.iin,ft.rin)
 
     visualize(ns, nx, epsr, sigma, md.nax, ex)
     amplitude(ns, nx, epsr, sigma, md.nax, amplt[3,:])
