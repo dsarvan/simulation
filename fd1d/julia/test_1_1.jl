@@ -28,7 +28,7 @@ end
 
 
 function gaussian(ts::Int, t0::Int, sigma::Float32)
-    return exp(-0.5*((ts - t0)/sigma)^2)
+    return exp(-0.5f0*((ts - t0)/sigma)^2)
 end
 
 
@@ -44,11 +44,11 @@ function main()
 
     for ts in map(Int,1:ns)
         # calculate the Ex field
-        @views ex[2:nx] .+= 0.5 .* (hy[1:nx-1] .- hy[2:nx])
+        @views ex[2:nx] .+= 0.5f0 .* (hy[1:nx-1] .- hy[2:nx])
         # put a Gaussian pulse in the middle
         ex[nx÷2+1] = gaussian(ts, 40, 12.f0)
         # calculate the Hy field
-        @views hy[1:nx-1] .+= 0.5 .* (ex[1:nx-1] .- ex[2:nx])
+        @views hy[1:nx-1] .+= 0.5f0 .* (ex[1:nx-1] .- ex[2:nx])
     end
 
     ntime = time_ns()
