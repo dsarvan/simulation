@@ -17,7 +17,7 @@ const F32Array = Array{Float32}
 function visualize(ns::Int, nx::Int, epsr::Float32, cb::F32Array, ex::F32Array)
     fig, axs = pyplot.subplots(figsize=(8,3), frameon=true)
     fig.suptitle("FDTD simulation of a pulse striking dielectric material")
-    medium = epsr > 1 ? findall(x->x!=0,0.5./cb.-1) : 0.5./cb.-1
+    medium = epsr > 1 ? findall(x->x!=0,0.5f0./cb.-1) : 0.5f0./cb.-1
     axs.plot(0:nx-1, ex, color="k", linewidth=1.0)
     axs.axvspan(medium[1], medium[end], color="y", alpha=0.3)
     axs.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
@@ -31,13 +31,13 @@ end
 
 
 function gaussian(ts::Int, t0::Int, sigma::Float32)
-    return exp(-0.5*((ts - t0)/sigma)^2)
+    return exp(-0.5f0*((ts - t0)/sigma)^2)
 end
 
 
 function dielectric(nx::Int, epsr::Float32)
     cb = fill(0.5f0::Float32, nx)
-    cb[nx÷2+1:nx] .= 0.5/epsr
+    cb[nx÷2+1:nx] .= 0.5f0/epsr
     return cb
 end
 
@@ -52,7 +52,7 @@ function main()
 
     bc = zeros(Float32, 4)
 
-    epsr::Float32 = 4.0  # relative permittivity
+    epsr::Float32 = 4.f0  # relative permittivity
     cb::F32Array = dielectric(nx, epsr)
 
     stime = time_ns()
@@ -66,7 +66,7 @@ function main()
         ex[1], bc[1], bc[2] = bc[1], bc[2], ex[2]
         ex[nx], bc[4], bc[3] = bc[4], bc[3], ex[nx-1]
         # calculate the Hy field
-        @views hy[1:nx-1] .+= 0.5 .* (ex[1:nx-1] .- ex[2:nx])
+        @views hy[1:nx-1] .+= 0.5f0 .* (ex[1:nx-1] .- ex[2:nx])
     end
 
     ntime = time_ns()
