@@ -19,7 +19,7 @@ const F32Array = Array{Float32}
 function visualize(ns::Int, nx::Int, epsr::Float32, sigma::Float32, nax::F32Array, ex::F32Array)
     fig, axs = pyplot.subplots(figsize=(8,3), frameon=true)
     fig.suptitle("FDTD simulation of a sinusoidal striking lossy dielectric material")
-    medium = epsr > 1 ? findall(x->x!=0,1.0./nax.-1) : 1.0./nax.-1
+    medium = epsr > 1 ? findall(x->x!=0,1.f0./nax.-1) : 1.f0./nax.-1
     axs.plot(0:nx-1, ex, color="k", linewidth=1.0)
     axs.axvspan(medium[1], medium[end], color="y", alpha=0.3)
     axs.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
@@ -40,14 +40,14 @@ end
 
 
 function sinusoidal(ts::Int, ds::Float32, freq::Float32)
-    dt::Float32 = ds/6e8  # time step (s)
-    return sin(2*pi*freq*dt*ts)
+    dt::Float32 = ds/6.f8  # time step (s)
+    return sin(freq*2*pi*dt*ts)
 end
 
 
 function dxfield(ts::Int, nx::Int, hy::F32Array, dx::F32Array)
     # calculate the electric flux density Dx
-    @views dx[2:nx] .+= 0.5 .* (hy[1:nx-1] .- hy[2:nx])
+    @views dx[2:nx] .+= 0.5f0 .* (hy[1:nx-1] .- hy[2:nx])
     # put a sinusoidal wave at the low end
     dx[2] += sinusoidal(ts, 0.01f0, 700f6)
 end
@@ -65,7 +65,7 @@ function hyfield(nx::Int, bc::F32Array, ex::F32Array, hy::F32Array)
     ex[1], bc[1], bc[2] = bc[1], bc[2], ex[2]
     ex[nx], bc[4], bc[3] = bc[4], bc[3], ex[nx-1]
     # calculate the Hy field
-    @views hy[1:nx-1] .+= 0.5 .* (ex[1:nx-1] .- ex[2:nx])
+    @views hy[1:nx-1] .+= 0.5f0 .* (ex[1:nx-1] .- ex[2:nx])
 end
 
 
@@ -74,7 +74,7 @@ function dielectric(nx::Int, dt::Float32, epsr::Float32, sigma::Float32)
         nax = fill(1.0f0::Float32, nx),
         nbx = fill(0.0f0::Float32, nx),
     )
-    eps0::Float32 = 8.854e-12  # vaccum permittivity (F/m)
+    eps0::Float32 = 8.854f-12  # vaccum permittivity (F/m)
     md.nax[nx÷2+1:nx] .= 1/(epsr + sigma*dt/eps0)
     md.nbx[nx÷2+1:nx] .= sigma*dt/eps0
     return md
@@ -93,10 +93,10 @@ function main()
 
     bc = zeros(Float32, 4)
 
-    ds::Float32 = 0.01  # spatial step (m)
-    dt::Float32 = ds/6e8  # time step (s)
-    epsr::Float32 = 4.0  # relative permittivity
-    sigma::Float32 = 0.04  # conductivity (S/m)
+    ds::Float32 = 0.01f0  # spatial step (m)
+    dt::Float32 = ds/6.f8  # time step (s)
+    epsr::Float32 = 4.f0  # relative permittivity
+    sigma::Float32 = 0.04f0  # conductivity (S/m)
     md::Medium = dielectric(nx, dt, epsr, sigma)
 
     stime = time_ns()
