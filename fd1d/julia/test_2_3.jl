@@ -19,7 +19,7 @@ const F32Array = Array{Float32}
 function visualize(ns::Int, nx::Int, epsr::Float32, sigma::Float32, nax::F32Array, ex::F32Array)
     fig, axs = pyplot.subplots(figsize=(8,3), frameon=true)
     fig.suptitle("FDTD simulation of a pulse striking Debye dielectric material")
-    medium = epsr > 1 ? findall(x->x!=0,1.0./nax.-1) : 1.0./nax.-1
+    medium = epsr > 1 ? findall(x->x!=0,1.f0./nax.-1) : 1.f0./nax.-1
     axs.plot(0:nx-1, ex, color="k", linewidth=1.0)
     axs.axvspan(medium[1], medium[end], color="y", alpha=0.3)
     axs.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
@@ -36,7 +36,7 @@ end
 function amplitude(ns::Int, nx::Int, epsr::Float32, sigma::Float32, nax::F32Array, amp::F32Array)
     fig, axs = pyplot.subplots(figsize=(8,3), frameon=true)
     fig.suptitle("The discrete Fourier transform with pulse as its source")
-    medium = epsr > 1 ? findall(x->x!=0,1.0./nax.-1) : 1.0./nax.-1
+    medium = epsr > 1 ? findall(x->x!=0,1.f0./nax.-1) : 1.f0./nax.-1
     axs.plot(0:nx-1, amp, color="k", linewidth=1.0)
     axs.axvspan(medium[1], medium[end], color="y", alpha=0.3)
     axs.set(xlim=(0, nx-1), ylim=(-0.2, 2.2))
@@ -63,25 +63,25 @@ end
 
 
 function gaussian(ts::Int, t0::Int, sigma::Float32)
-    return exp(-0.5*((ts - t0)/sigma)^2)
+    return exp(-0.5f0*((ts - t0)/sigma)^2)
 end
 
 
 function fourier(ts::Int, nf::Int, nx::Int, dt::Float32, freq::F32Array, ex::F32Array, ft::FTrans)
     # calculate the Fourier transform of input source
-    @views ft.rin[1:nf] .+= cos.(2*pi*freq[1:nf]*dt*ts) .* ex[11]
-    @views ft.iin[1:nf] .-= sin.(2*pi*freq[1:nf]*dt*ts) .* ex[11]
+    @views ft.rin[1:nf] .+= cos.(freq[1:nf]*2*pi*dt*ts) .* ex[11]
+    @views ft.iin[1:nf] .-= sin.(freq[1:nf]*2*pi*dt*ts) .* ex[11]
     # calculate the Fourier transform of Ex field
-    @views ft.rpt[1:nf,1:nx] .+= cos.(2*pi*freq[1:nf]*dt*ts) .* ex[1:nx]'
-    @views ft.ipt[1:nf,1:nx] .-= sin.(2*pi*freq[1:nf]*dt*ts) .* ex[1:nx]'
+    @views ft.rpt[1:nf,1:nx] .+= cos.(freq[1:nf]*2*pi*dt*ts) .* ex[1:nx]'
+    @views ft.ipt[1:nf,1:nx] .-= sin.(freq[1:nf]*2*pi*dt*ts) .* ex[1:nx]'
 end
 
 
 function dxfield(ts::Int, nx::Int, hy::F32Array, dx::F32Array)
     # calculate the electric flux density Dx
-    @views dx[2:nx] .+= 0.5 .* (hy[1:nx-1] .- hy[2:nx])
+    @views dx[2:nx] .+= 0.5f0 .* (hy[1:nx-1] .- hy[2:nx])
     # put a Gaussian pulse at the low end
-    dx[2] += gaussian(ts, 50, 10.0f0)
+    dx[2] += gaussian(ts, 50, 10.f0)
 end
 
 
@@ -98,7 +98,7 @@ function hyfield(nx::Int, bc::F32Array, ex::F32Array, hy::F32Array)
     ex[1], bc[1], bc[2] = bc[1], bc[2], ex[2]
     ex[nx], bc[4], bc[3] = bc[4], bc[3], ex[nx-1]
     # calculate the Hy field
-    @views hy[1:nx-1] .+= 0.5 .* (ex[1:nx-1] .- ex[2:nx])
+    @views hy[1:nx-1] .+= 0.5f0 .* (ex[1:nx-1] .- ex[2:nx])
 end
 
 
@@ -109,7 +109,7 @@ function dielectric(nx::Int, dt::Float32, chi::Float32, tau::Float32, epsr::Floa
         ncx = fill(0.0f0::Float32, nx),
         ndx = fill(0.0f0::Float32, nx),
     )
-    eps0::Float32 = 8.854e-12  # vaccum permittivity (F/m)
+    eps0::Float32 = 8.854f-12  # vaccum permittivity (F/m)
     md.nax[nx÷2+1:nx] .= 1/(epsr + sigma*dt/eps0 + chi*dt/tau)
     md.nbx[nx÷2+1:nx] .= sigma*dt/eps0
     md.ncx[nx÷2+1:nx] .= exp(-dt/tau)
@@ -131,16 +131,16 @@ function main()
 
     bc = zeros(Float32, 4)
 
-    ds::Float32 = 0.01  # spatial step (m)
-    dt::Float32 = ds/6e8  # time step (s)
-    chi::Float32 = 2.0  # relaxation susceptibility
-    tau::Float32 = 0.001e-6  # relaxation time (s)
-    epsr::Float32 = 2.0  # relative permittivity
-    sigma::Float32 = 0.01  # conductivity (S/m)
+    ds::Float32 = 0.01f0  # spatial step (m)
+    dt::Float32 = ds/6.f8  # time step (s)
+    chi::Float32 = 2.f0  # relaxation susceptibility
+    tau::Float32 = 0.001f-6  # relaxation time (s)
+    epsr::Float32 = 2.f0  # relative permittivity
+    sigma::Float32 = 0.01f0  # conductivity (S/m)
     md::Medium = dielectric(nx, dt, chi, tau, epsr, sigma)
 
     # frequency 50 MHz, 200 MHz, 500 MHz
-    freq = Float32[50e6, 200e6, 500e6]
+    freq = Float32[50f6, 200f6, 500f6]
     nf::Int = length(freq)  # number of frequencies
 
     ft = FTrans(
