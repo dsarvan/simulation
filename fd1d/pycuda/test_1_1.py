@@ -1,32 +1,33 @@
 #!/usr/bin/env python
-# File: test_1_1.py
+# File: test11.py
 # Name: D.Saravanan
 # Date: 11/10/2021
 
 """ Simulation of a pulse in free space """
 
-import matplotlib.pyplot as plt
-import numpy as np
-
-import pycuda.autoinit
-import pycuda.driver as drv
+import numpy
+from pycuda import driver
+from pycuda import autoinit
 from pycuda import gpuarray
+from matplotlib import pyplot
 from pycuda.compiler import SourceModule
 
-plt.style.use("classic")
-plt.style.use("../pyplot.mplstyle")
+pyplot.style.use("classic")
+pyplot.style.use("pyplot.mplstyle")
+
+type F32Array = gpuarray.GPUArray
 
 
-def visualize(ns: int, nx: int, ex: np.ndarray) -> None:
-    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
+def visualize(ns: int, nx: int, ex: F32Array):
+    fig, axs = pyplot.subplots(figsize=(8,3), frameon=True)
     fig.suptitle(r"FDTD simulation of a pulse in free space")
-    ax.plot(range(nx), ex, color="k", linewidth=1.0)
-    ax.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
-    ax.set(xticks=range(0, nx+1, int(np.ceil(nx/500)*50)))
-    ax.set(xlabel=r"$z\;(cm)$", ylabel=r"$E_x\;(V/m)$")
-    ax.text(0.02, 0.90, rf"$T$ = {ns}", transform=ax.transAxes)
-    plt.subplots_adjust(bottom=0.2, hspace=0.45)
-    plt.savefig("test_1_1.png", dpi=100)
+    axs.plot(range(nx), ex, color="k", linewidth=1.0)
+    axs.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
+    axs.set(xticks=range(0, nx+1, int(numpy.ceil(nx/500)*50)))
+    axs.set(xlabel=r"$z\;(cm)$", ylabel=r"$E_x\;(V/m)$")
+    axs.text(0.02, 0.90, rf"$T$ = {ns}", transform=axs.transAxes)
+    fig.subplots_adjust(bottom=0.2, hspace=0.45)
+    fig.savefig("test11.png", dpi=100)
 
 
 kernel = """
@@ -35,18 +36,18 @@ kernel = """
 
 
 __device__
-float gaussian(int t, int t0, float sigma) {
-    return expf(-0.5f*(t - t0)/sigma*(t - t0)/sigma);
+float gaussian(int ts, int t0, float sigma) {
+    return expf(-0.5f*(ts - t0)/sigma*(ts - t0)/sigma);
 }
 
 
 __global__
-void exfield(int t, int nx, float *ex, float *hy) {
+void exfield(int ts, int nx, float *hy, float *ex) {
     /* calculate the Ex field */
     for (int i = idx+1; i < nx; i += stx)
         ex[i] += 0.5f * (hy[i-1] - hy[i]);
     /* put a Gaussian pulse in the middle */
-    if (idx == nx/2) ex[nx/2] = gaussian(t, 40, 12.0f);
+    if (idx == nx/2) ex[nx/2] = gaussian(ts, 40, 12.0f);
 }
 
 
@@ -61,34 +62,34 @@ void hyfield(int nx, float *ex, float *hy) {
 
 def main():
 
-    nx = np.int32(38000)  # number of grid points
-    ns = np.int32(40000)  # number of time steps
+    nx = numpy.int32(38000)  # number of grid points
+    ns = numpy.int32(40000)  # number of time steps
 
-    ex = gpuarray.zeros(nx, dtype=np.float32)
-    hy = gpuarray.zeros(nx, dtype=np.float32)
+    ex = gpuarray.zeros(nx, numpy.float32)
+    hy = gpuarray.zeros(nx, numpy.float32)
 
-    numSM: int = drv.Device(0).multiprocessor_count
+    numSM: int = driver.Device(0).multiprocessor_count
 
-    blockDimx: int = 256
-    gridDimx: int = 32*numSM
+    blkDimx: int = 256
+    grdDimx: int = 32*numSM
 
-    gridDim = (gridDimx,1,1)
-    blockDim = (blockDimx,1,1)
+    blkDim = (blkDimx,1,1)
+    grdDim = (grdDimx,1,1)
 
-    mod = SourceModule(kernel)
-    exfield = mod.get_function("exfield")
-    hyfield = mod.get_function("hyfield")
+    module = SourceModule(kernel)
+    exfield = module.get_function("exfield")
+    hyfield = module.get_function("hyfield")
 
-    stime = drv.Event()
-    ntime = drv.Event()
+    stime = driver.Event()
+    ntime = driver.Event()
 
     stime.record()
 
-    for t in np.arange(1, ns+1).astype(np.int32):
-        exfield(t, nx, ex, hy, grid=gridDim, block=blockDim)
-        hyfield(nx, ex, hy, grid=gridDim, block=blockDim)
+    for ts in map(numpy.int32,range(1,ns+1)):
+        exfield(ts, nx, hy, ex, block=blkDim, grid=grdDim)
+        hyfield(nx, ex, hy, block=blkDim, grid=grdDim)
 
-    drv.Context.synchronize()
+    driver.Context.synchronize()
 
     ntime.record()
     ntime.synchronize()
