@@ -1,43 +1,44 @@
 #!/usr/bin/env python
-# File: fd1d_2_1.py
+# File: fdtd21.py
 # Name: D.Saravanan
 # Date: 25/11/2021
 
 """ Simulation of a propagating sinusoidal wave of 700 MHz striking a lossy
 dielectric with a dielectric constant of 4 and conductivity of 0.04 (S/m) """
 
-import matplotlib.pyplot as plt
-import numpy as np
-from collections import namedtuple
-
-import pycuda.autoinit
-import pycuda.driver as drv
+import numpy
+from pycuda import driver
+from pycuda import autoinit
 from pycuda import gpuarray
+from matplotlib import pyplot
+from typing import NamedTuple
 from pycuda.compiler import SourceModule
 
-plt.style.use("classic")
-plt.style.use("../pyplot.mplstyle")
+pyplot.style.use("classic")
+pyplot.style.use("pyplot.mplstyle")
+
+type F32Array = gpuarray.GPUArray
 
 
-def visualize(ns: int, nx: int, epsr: float, sigma: float, nax: np.ndarray, ex: np.ndarray) -> None:
-    fig, ax = plt.subplots(figsize=(8,3), gridspec_kw={"hspace":0.2})
+def visualize(ns: int, nx: int, epsr: float, sigma: float, nax: F32Array, ex: F32Array):
+    fig, axs = pyplot.subplots(figsize=(8,3), frameon=True)
     fig.suptitle(r"FDTD simulation of a sinusoidal striking lossy dielectric material")
-    medium = np.where(1.0/nax-1)[0] if epsr > 1 else (1.0/nax-1)
-    ax.plot(range(nx), ex, color="k", linewidth=1.0)
-    ax.axvspan(medium[0], medium[-1], color="y", alpha=0.3)
-    ax.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
-    ax.set(xticks=range(0, nx+1, int(np.ceil(nx/500)*25)))
-    ax.set(xlabel=r"$z\;(cm)$", ylabel=r"$E_x\;(V/m)$")
-    ax.text(0.02, 0.90, rf"$T$ = {ns}", transform=ax.transAxes)
-    ax.text(0.90, 0.90, rf"$\epsilon_r$ = {epsr}", transform=ax.transAxes)
-    ax.text(0.85, 0.80, rf"$\sigma$ = {sigma} $S/m$", transform=ax.transAxes)
-    plt.subplots_adjust(bottom=0.2, hspace=0.45)
-    plt.savefig("fd1d_2_1.png", dpi=100)
+    medium = numpy.where(1.0/nax-1)[0] if epsr > 1 else (1.0/nax-1)
+    axs.plot(range(nx), ex, color="k", linewidth=1.0)
+    axs.axvspan(medium[0], medium[-1], color="y", alpha=0.3)
+    axs.set(xlim=(0, nx-1), ylim=(-1.2, 1.2))
+    axs.set(xticks=range(0, nx+1, int(numpy.ceil(nx/500)*25)))
+    axs.set(xlabel=r"$z\;(cm)$", ylabel=r"$E_x\;(V/m)$")
+    axs.text(0.02, 0.90, rf"$T$ = {ns}", transform=axs.transAxes)
+    axs.text(0.90, 0.90, rf"$\epsilon_r$ = {epsr}", transform=axs.transAxes)
+    axs.text(0.85, 0.80, rf"$\sigma$ = {sigma} $S/m$", transform=axs.transAxes)
+    fig.subplots_adjust(bottom=0.2, hspace=0.45)
+    fig.savefig("fdtd21.png", dpi=100)
 
 
-medium = namedtuple('medium', (
-    'nax', 'nbx',
-))
+Medium = NamedTuple('Medium',[
+    ('nax',F32Array), ('nbx',F32Array),
+])
 
 
 kernel = """
@@ -47,38 +48,38 @@ kernel = """
 
 typedef struct {
     float *nax, *nbx;
-} medium;
+} Medium;
 
 
 __device__
-float sinusoidal(int t, float ds, float freq) {
+float sinusoidal(int ts, float ds, float freq) {
     float dt = ds/6e8f;  /* time step (s) */
-    return sinf(2*M_PI*freq*dt*t);
+    return sinf(2*M_PI*freq*dt*ts);
 }
 
 
 __global__
-void dxfield(int t, int nx, float *dx, float *hy) {
+void dxfield(int ts, int nx, float *hy, float *dx) {
     /* calculate the electric flux density Dx */
     for (int i = idx+1; i < nx; i += stx)
         dx[i] += 0.5f * (hy[i-1] - hy[i]);
     /* put a sinusoidal wave at the low end */
-    if (idx == 1) dx[1] += sinusoidal(t, 0.01f, 700e6f);
+    if (idx == 1) dx[1] += sinusoidal(ts, 0.01f, 700e6f);
 }
 
 
 __global__
-void exfield(int nx, medium *md, float *dx, float *ix, float *ex) {
+void exfield(int nx, Medium md, float *ix, float *dx, float *ex) {
     /* calculate the Ex field from Dx */
     for (int i = idx+1; i < nx; i += stx) {
-        ex[i] = md->nax[i] * (dx[i] - ix[i]);
-        ix[i] += md->nbx[i] * ex[i];
+        ex[i] = md.nax[i] * (dx[i] - ix[i]);
+        ix[i] += md.nbx[i] * ex[i];
     }
 }
 
 
 __global__
-void hyfield(int nx, float *ex, float *hy, float *bc) {
+void hyfield(int nx, float *bc, float *ex, float *hy) {
     /* absorbing boundary conditions */
     if (idx == 0) ex[0] = bc[0], bc[0] = bc[1], bc[1] = ex[1];
     if (idx == nx-1) ex[nx-1] = bc[3], bc[3] = bc[2], bc[2] = ex[nx-2];
@@ -89,10 +90,10 @@ void hyfield(int nx, float *ex, float *hy, float *bc) {
 """
 
 
-def dielectric(nx: int, dt: float, epsr: float, sigma: float) -> medium:
-    md = medium(
-        nax = gpuarray.empty(nx, dtype=np.float32).fill(1.0),
-        nbx = gpuarray.empty(nx, dtype=np.float32).fill(0.0),
+def dielectric(nx: int, dt: float, epsr: float, sigma: float):
+    md = Medium(
+        nax = gpuarray.empty(nx, numpy.float32).fill(1.0),
+        nbx = gpuarray.empty(nx, numpy.float32).fill(0.0),
     )
     eps0: float = 8.854e-12  # vacuum permittivity (F/m)
     md.nax[nx//2:] = 1/(epsr + sigma*dt/eps0)
@@ -102,45 +103,41 @@ def dielectric(nx: int, dt: float, epsr: float, sigma: float) -> medium:
 
 def main():
 
-    nx = np.int32(512)  # number of grid points
-    ns = np.int32(740)  # number of time steps
+    nx = numpy.int32(512)  # number of grid points
+    ns = numpy.int32(740)  # number of time steps
 
-    dx = gpuarray.zeros(nx, dtype=np.float32)
-    ex = gpuarray.zeros(nx, dtype=np.float32)
-    ix = gpuarray.zeros(nx, dtype=np.float32)
-    hy = gpuarray.zeros(nx, dtype=np.float32)
+    dx = gpuarray.zeros(nx, numpy.float32)
+    ex = gpuarray.zeros(nx, numpy.float32)
+    ix = gpuarray.zeros(nx, numpy.float32)
+    hy = gpuarray.zeros(nx, numpy.float32)
 
-    bc = gpuarray.zeros(4, dtype=np.float32)
+    bc = gpuarray.zeros(4, numpy.float32)
 
-    ds = np.float32(0.01)  # spatial step (m)
-    dt = np.float32(ds/6e8)  # time step (s)
+    ds = numpy.float32(0.01)  # spatial step (m)
+    dt = numpy.float32(ds/6e8)  # time step (s)
     epsr: float = 4.0  # relative permittivity
     sigma: float = 0.04  # conductivity (S/m)
-    md: medium = dielectric(nx, dt, epsr, sigma)
+    md: Medium = dielectric(nx, dt, epsr, sigma)
 
-    mdptr = gpuarray.to_gpu(np.array([
-        md.nax.ptr, md.nbx.ptr,
-    ], dtype=np.uint64)).gpudata
+    numSM: int = driver.Device(0).multiprocessor_count
 
-    numSM: int = drv.Device(0).multiprocessor_count
+    blkDimx: int = 256
+    grdDimx: int = 32*numSM
 
-    blockDimx: int = 256
-    gridDimx: int = 32*numSM
+    blkDim = (blkDimx,1,1)
+    grdDim = (grdDimx,1,1)
 
-    gridDim = (gridDimx,1,1)
-    blockDim = (blockDimx,1,1)
+    module = SourceModule(kernel, options=['-O3','-lineinfo','--use_fast_math'])
+    dxfield = module.get_function("dxfield")
+    exfield = module.get_function("exfield")
+    hyfield = module.get_function("hyfield")
 
-    mod = SourceModule(kernel)
-    dxfield = mod.get_function("dxfield")
-    exfield = mod.get_function("exfield")
-    hyfield = mod.get_function("hyfield")
+    for ts in map(numpy.int32,range(1,ns+1)):
+        dxfield(ts, nx, hy, dx, block=blkDim, grid=grdDim)
+        exfield(nx,*md, ix, dx, ex, block=blkDim, grid=grdDim)
+        hyfield(nx, bc, ex, hy, block=blkDim, grid=grdDim)
 
-    for t in np.arange(1, ns+1).astype(np.int32):
-        dxfield(t, nx, dx, hy, grid=gridDim, block=blockDim)
-        exfield(nx, mdptr, dx, ix, ex, grid=gridDim, block=blockDim)
-        hyfield(nx, ex, hy, bc, grid=gridDim, block=blockDim)
-
-    drv.Context.synchronize()
+    driver.Context.synchronize()
 
     visualize(ns, nx, epsr, sigma, md.nax.get(), ex.get())
 
