@@ -1,0 +1,59 @@
+# Matplotlib style for plotting
+
+axes.grid: False
+axes.axisbelow: True
+axes.facecolor: white
+axes.labelsize: 12
+axes.linewidth: 1.0
+axes.titlesize: 12
+axes.prop_cycle: cycler('color', ['black', '0.4', '0.7']) + cycler('ls', ['-', '--', ':'])
+
+axes3d.grid: True
+axes3d.xaxis.panecolor: (0.95, 0.95, 0.95, 0.5)
+axes3d.yaxis.panecolor: (0.95, 0.95, 0.95, 0.5)
+axes3d.zaxis.panecolor: (0.95, 0.95, 0.95, 0.5)
+
+figure.dpi: 100
+figure.edgecolor: white
+figure.facecolor: white
+figure.titlesize: 12
+
+font.family: serif
+font.serif: Times
+font.sans-serif: Helvetica
+font.monospace: Courier
+font.weight: normal
+font.size: 10
+
+mathtext.rm: serif
+mathtext.it: serif:italic
+mathtext.bf: serif:bold
+mathtext.fontset: custom
+
+# Text rendering with LaTeX
+# https://matplotlib.org/stable/users/explain/text/usetex.html
+
+grid.alpha: 0.5
+grid.color: black
+grid.linestyle: --
+grid.linewidth: 0.5
+
+image.interpolation: bicubic
+
+legend.frameon: False
+
+pgf.texsystem: pdflatex
+
+savefig.bbox: standard
+savefig.facecolor: white
+savefig.format: png
+savefig.pad_inches: 0.05
+
+xtick.direction: inout
+xtick.top: False
+
+ytick.direction: inout
+ytick.right: False
+
+text.usetex: True
+text.latex.preamble: \usepackage{amsmath} \usepackage{amssymb} \usepackage[T1]{fontenc} \usepackage{pgfplots}
