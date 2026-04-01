@@ -34,8 +34,8 @@ def visualize(ns: int, nx: int, epsr: float, cb: F32Array, ex: F32Array):
 
 
 kernel = """
-#define idx blockIdx.x*blockDim.x+threadIdx.x
-#define stx blockDim.x*gridDim.x
+#define idx (blockIdx.x*blockDim.x+threadIdx.x)
+#define stx (blockDim.x*gridDim.x)
 
 
 __device__
@@ -83,9 +83,9 @@ def main():
 
     bc = gpuarray.zeros(4, numpy.float32)
 
-    ds: float = 0.01  # spatial step (m)
-    dt: float = ds/6e8  # time step (s)
-    epsr: float = 4.0  # relative permittivity
+    ds = numpy.float32(0.01)  # spatial step (m)
+    dt = numpy.float32(ds/6e8)  # time step (s)
+    epsr = numpy.float32(4.0)  # relative permittivity
     cb: F32Array = dielectric(nx, epsr)
 
     numSM: int = driver.Device(0).multiprocessor_count
