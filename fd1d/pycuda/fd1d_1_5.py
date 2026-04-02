@@ -36,8 +36,8 @@ def visualize(ns: int, nx: int, epsr: float, sigma: float, cb: F32Array, ex: F32
 
 
 kernel = """
-#define idx blockIdx.x*blockDim.x+threadIdx.x
-#define stx blockDim.x*gridDim.x
+#define idx (blockIdx.x*blockDim.x+threadIdx.x)
+#define stx (blockDim.x*gridDim.x)
 
 
 __device__
@@ -72,8 +72,8 @@ void hyfield(int nx, float *bc, float *ex, float *hy) {
 def dielectric(nx: int, dt: float, epsr: float, sigma: float):
     ca = gpuarray.empty(nx, numpy.float32).fill(1.0)
     cb = gpuarray.empty(nx, numpy.float32).fill(0.5)
-    eps0: float = 8.854e-12  # vacuum permittivity (F/m)
-    epsf: float = dt*sigma/(2*eps0*epsr)
+    eps0 = numpy.float32(8.854e-12)  # vacuum permittivity (F/m)
+    epsf = numpy.float32(dt*sigma/(2*eps0*epsr))
     ca[nx//2:] = (1 - epsf)/(1 + epsf)
     cb[nx//2:] = 0.5/(epsr*(1 + epsf))
     return ca, cb
@@ -89,10 +89,10 @@ def main():
 
     bc = gpuarray.zeros(4, numpy.float32)
 
-    ds: float = 0.01  # spatial step (m)
-    dt: float = ds/6e8  # time step (s)
-    epsr: float = 4.0  # relative permittivity
-    sigma: float = 0.04  # conductivity (S/m)
+    ds = numpy.float32(0.01)  # spatial step (m)
+    dt = numpy.float32(ds/6e8)  # time step (s)
+    epsr = numpy.float32(4.0)  # relative permittivity
+    sigma = numpy.float32(0.04)  # conductivity (S/m)
     ca, cb = dielectric(nx, dt, epsr, sigma)
 
     numSM: int = driver.Device(0).multiprocessor_count
