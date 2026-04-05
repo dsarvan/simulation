@@ -42,8 +42,8 @@ Medium = NamedTuple('Medium',[
 
 
 kernel = """
-#define idx blockIdx.x*blockDim.x+threadIdx.x
-#define stx blockDim.x*gridDim.x
+#define idx (blockIdx.x*blockDim.x+threadIdx.x)
+#define stx (blockDim.x*gridDim.x)
 
 
 typedef struct {
@@ -95,7 +95,7 @@ def dielectric(nx: int, dt: float, epsr: float, sigma: float):
         nax = gpuarray.empty(nx, numpy.float32).fill(1.0),
         nbx = gpuarray.empty(nx, numpy.float32).fill(0.0),
     )
-    eps0: float = 8.854e-12  # vacuum permittivity (F/m)
+    eps0 = numpy.float32(8.854e-12)  # vacuum permittivity (F/m)
     md.nax[nx//2:] = 1/(epsr + sigma*dt/eps0)
     md.nbx[nx//2:] = sigma*dt/eps0
     return md
@@ -115,8 +115,8 @@ def main():
 
     ds = numpy.float32(0.01)  # spatial step (m)
     dt = numpy.float32(ds/6e8)  # time step (s)
-    epsr: float = 4.0  # relative permittivity
-    sigma: float = 0.04  # conductivity (S/m)
+    epsr = numpy.float32(4.0)  # relative permittivity
+    sigma = numpy.float32(0.04)  # conductivity (S/m)
     md: Medium = dielectric(nx, dt, epsr, sigma)
 
     numSM: int = driver.Device(0).multiprocessor_count
