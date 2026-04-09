@@ -66,8 +66,8 @@ Medium = NamedTuple('Medium',[
 
 
 kernel = """
-#define idx blockIdx.x*blockDim.x+threadIdx.x
-#define stx blockDim.x*gridDim.x
+#define idx (blockIdx.x*blockDim.x+threadIdx.x)
+#define stx (blockDim.x*gridDim.x)
 
 
 typedef struct {
@@ -143,7 +143,7 @@ def dielectric(nx: int, dt: float, chi: float, tau: float, epsr: float, sigma: f
         ncx = gpuarray.empty(nx, numpy.float32).fill(0.0),
         ndx = gpuarray.empty(nx, numpy.float32).fill(0.0),
     )
-    eps0: float = 8.854e-12  # vacuum permittivity (F/m)
+    eps0 = numpy.float32(8.854e-12)  # vacuum permittivity (F/m)
     md.nax[nx//2:] = 1/(epsr + sigma*dt/eps0 + chi*dt/tau)
     md.nbx[nx//2:] = sigma*dt/eps0
     md.ncx[nx//2:] = exp(-dt/tau)
@@ -166,10 +166,10 @@ def main():
 
     ds = numpy.float32(0.01)  # spatial step (m)
     dt = numpy.float32(ds/6e8)  # time step (s)
-    chi: float = 2.0  # relaxation susceptibility
-    tau: float = 0.001e-6  # relaxation time (s)
-    epsr: float = 2.0  # relative permittivity
-    sigma: float = 0.01  # conductivity (S/m)
+    chi = numpy.float32(2.0)  # relaxation susceptibility
+    tau = numpy.float32(0.001e-6)  # relaxation time (s)
+    epsr = numpy.float32(2.0)  # relative permittivity
+    sigma = numpy.float32(0.01)  # conductivity (S/m)
     md: Medium = dielectric(nx, dt, chi, tau, epsr, sigma)
 
     # frequency 50 MHz, 200 MHz, 500 MHz
