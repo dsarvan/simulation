@@ -9,17 +9,17 @@
 #include <math.h>
 
 
-double gaussian(int t, int t0, double sigma) {
-    return exp(-0.5*(t - t0)/sigma*(t - t0)/sigma);
+double gaussian(int ts, int t0, double sigma) {
+    return exp(-0.5*(ts - t0)/sigma*(ts - t0)/sigma);
 }
 
 
-void exfield(int t, int nx, double *ex, double *hy) {
+void exfield(int ts, int nx, double *hy, double *ex) {
     /* calculate the Ex field */
     for (int i = 1; i < nx; i++)
         ex[i] += 0.5 * (hy[i-1] - hy[i]);
     /* put a Gaussian pulse in the middle */
-    ex[nx/2] = gaussian(t, 40, 12.0);
+    ex[nx/2] = gaussian(ts, 40, 12.0);
 }
 
 
@@ -35,11 +35,16 @@ int main() {
     int nx = 512;  /* number of grid points */
     int ns = 300;  /* number of time steps */
 
-    double *ex = (double*) calloc(nx, sizeof(*ex));
-    double *hy = (double*) calloc(nx, sizeof(*hy));
+    double *ex = malloc(nx*sizeof(*ex));
+    double *hy = malloc(nx*sizeof(*hy));
 
-    for (int t = 1; t <= ns; t++) {
-        exfield(t, nx, ex, hy);
+    for (int i = 0; i < nx; i++) {
+        ex[i] = 0.0;
+        hy[i] = 0.0;
+    }
+
+    for (int ts = 1; ts <= ns; ts++) {
+        exfield(ts, nx, hy, ex);
         hyfield(nx, ex, hy);
     }
 
