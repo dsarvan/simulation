@@ -9,22 +9,22 @@
 #include <math.h>
 
 
-double sinusoidal(int t, double ds, double freq) {
+double sinusoidal(int ts, double ds, double freq) {
     double dt = ds/6e8;  /* time step (s) */
-    return sin(2*M_PI*freq*dt*t);
+    return sin(2*M_PI*freq*dt*ts);
 }
 
 
-void exfield(int t, int nx, double *cb, double *ex, double *hy) {
+void exfield(int ts, int nx, double *cb, double *hy, double *ex) {
     /* calculate the Ex field */
     for (int i = 1; i < nx; i++)
         ex[i] += cb[i] * (hy[i-1] - hy[i]);
     /* put a sinusoidal wave at the low end */
-    ex[1] += sinusoidal(t, 0.01, 700e6);
+    ex[1] += sinusoidal(ts, 0.01, 700e6);
 }
 
 
-void hyfield(int nx, double *ex, double *hy, double *bc) {
+void hyfield(int nx, double *bc, double *ex, double *hy) {
     /* absorbing boundary conditions */
     ex[0] = bc[0], bc[0] = bc[1], bc[1] = ex[1];
     ex[nx-1] = bc[3], bc[3] = bc[2], bc[2] = ex[nx-2];
@@ -35,7 +35,7 @@ void hyfield(int nx, double *ex, double *hy, double *bc) {
 
 
 double *dielectric(int nx, double epsr) {
-    double *cb = (double*) calloc(nx, sizeof(*cb));
+    double *cb = malloc(nx*sizeof(*cb));
     for (int i = 0; i < nx; cb[i] = 0.5, i++);
     for (int i = nx/2; i < nx; cb[i] = 0.5/epsr, i++);
     return cb;
@@ -47,8 +47,13 @@ int main() {
     int nx = 512;  /* number of grid points */
     int ns = 740;  /* number of time steps */
 
-    double *ex = (double*) calloc(nx, sizeof(*ex));
-    double *hy = (double*) calloc(nx, sizeof(*hy));
+    double *ex = malloc(nx*sizeof(*ex));
+    double *hy = malloc(nx*sizeof(*hy));
+
+    for (int i = 0; i < nx; i++) {
+        ex[i] = 0.0;
+        hy[i] = 0.0;
+    }
 
     double bc[4] = {0.0};
 
@@ -57,9 +62,9 @@ int main() {
     double epsr = 4.0;  /* relative permittivity */
     double *cb = dielectric(nx, epsr);
 
-    for (int t = 1; t <= ns; t++) {
-        exfield(t, nx, cb, ex, hy);
-        hyfield(nx, ex, hy, bc);
+    for (int ts = 1; ts <= ns; ts++) {
+        exfield(ts, nx, cb, hy, ex);
+        hyfield(nx, bc, ex, hy);
     }
 
     free(cb);
