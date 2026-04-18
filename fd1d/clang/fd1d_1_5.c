@@ -16,22 +16,22 @@ typedef struct {
 } tuple;
 
 
-double sinusoidal(int t, double ds, double freq) {
+double sinusoidal(int ts, double ds, double freq) {
     double dt = ds/6e8;  /* time step (s) */
-    return sin(2*M_PI*freq*dt*t);
+    return sin(2*M_PI*freq*dt*ts);
 }
 
 
-void exfield(int t, int nx, double *ca, double *cb, double *ex, double *hy) {
+void exfield(int ts, int nx, double *ca, double *cb, double *hy, double *ex) {
     /* calculate the Ex field */
     for (int i = 1; i < nx; i++)
         ex[i] = ca[i] * ex[i] + cb[i] * (hy[i-1] - hy[i]);
     /* put a sinusoidal wave at the low end */
-    ex[1] += sinusoidal(t, 0.01, 700e6);
+    ex[1] += sinusoidal(ts, 0.01, 700e6);
 }
 
 
-void hyfield(int nx, double *ex, double *hy, double *bc) {
+void hyfield(int nx, double *bc, double *ex, double *hy) {
     /* absorbing boundary conditions */
     ex[0] = bc[0], bc[0] = bc[1], bc[1] = ex[1];
     ex[nx-1] = bc[3], bc[3] = bc[2], bc[2] = ex[nx-2];
@@ -43,8 +43,8 @@ void hyfield(int nx, double *ex, double *hy, double *bc) {
 
 tuple dielectric(int nx, double dt, double epsr, double sigma) {
     tuple n;
-    n.ca = (double*) calloc(nx, sizeof(*n.ca));
-    n.cb = (double*) calloc(nx, sizeof(*n.cb));
+    n.ca = malloc(nx*sizeof(*n.ca));
+    n.cb = malloc(nx*sizeof(*n.cb));
     for (int i = 0; i < nx; n.ca[i] = 1.0, i++);
     for (int i = 0; i < nx; n.cb[i] = 0.5, i++);
     double eps0 = 8.854e-12;  /* vacuum permittivity (F/m) */
@@ -60,8 +60,13 @@ int main() {
     int nx = 512;  /* number of grid points */
     int ns = 740;  /* number of time steps */
 
-    double *ex = (double*) calloc(nx, sizeof(*ex));
-    double *hy = (double*) calloc(nx, sizeof(*hy));
+    double *ex = malloc(nx*sizeof(*ex));
+    double *hy = malloc(nx*sizeof(*hy));
+
+    for (int i = 0; i < nx; i++) {
+        ex[i] = 0.0;
+        hy[i] = 0.0;
+    }
 
     double bc[4] = {0.0};
 
@@ -71,9 +76,9 @@ int main() {
     double sigma = 0.04;  /* conductivity (S/m) */
     tuple n = dielectric(nx, dt, epsr, sigma);
 
-    for (int t = 1; t <= ns; t++) {
-        exfield(t, nx, n.ca, n.cb, ex, hy);
-        hyfield(nx, ex, hy, bc);
+    for (int ts = 1; ts <= ns; ts++) {
+        exfield(ts, nx, n.ca, n.cb, hy, ex);
+        hyfield(nx, bc, ex, hy);
     }
 
     free(n.ca);
