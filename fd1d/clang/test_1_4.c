@@ -1,4 +1,4 @@
-/* File: test_1_4.c
+/* File: test14.c
  * Name: D.Saravanan
  * Date: 22/10/2021
  * Simulation of a propagating sinusoidal striking a dielectric medium
