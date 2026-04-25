@@ -1,4 +1,4 @@
-/* File: fd1d_2_2.c
+/* File: fdtd22.c
  * Name: D.Saravanan
  * Date: 07/12/2021
  * Simulation of a pulse striking a dielectric medium and implements
