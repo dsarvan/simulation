@@ -1,4 +1,4 @@
-/* File: fd1d_2_3.c
+/* File: fdtd23.c
  * Name: D.Saravanan
  * Date: 10/01/2022
  * Simulation of a pulse striking a frequency-dependent dielectric material and
