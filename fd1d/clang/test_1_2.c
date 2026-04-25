@@ -1,4 +1,4 @@
-/* File: test_1_2.c
+/* File: test12.c
  * Name: D.Saravanan
  * Date: 19/10/2021
  * Simulation of a pulse with absorbing boundary conditions
