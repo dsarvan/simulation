@@ -1,4 +1,4 @@
-/* File: test_2_1.c
+/* File: test21.c
  * Name: D.Saravanan
  * Date: 25/11/2021
  * Simulation of a propagating sinusoidal wave of 700 MHz striking a lossy

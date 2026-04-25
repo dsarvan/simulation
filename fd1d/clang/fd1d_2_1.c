@@ -1,4 +1,4 @@
-/* File: fd1d_2_1.c
+/* File: fdtd21.c
  * Name: D.Saravanan
  * Date: 25/11/2021
  * Simulation of a propagating sinusoidal wave of 700 MHz striking a lossy
