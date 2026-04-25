@@ -1,4 +1,4 @@
-/* File: fd1d_1_3.c
+/* File: fdtd13.c
  * Name: D.Saravanan
  * Date: 19/10/2021
  * Simulation of a pulse hitting a dielectric medium
