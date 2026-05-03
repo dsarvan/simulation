@@ -1,4 +1,4 @@
-/* File: test_1_4.cu
+/* File: test14.cu
  * Name: D.Saravanan
  * Date: 22/10/2021
  * Simulation of a propagating sinusoidal striking a dielectric medium
@@ -9,29 +9,29 @@
 #include <math.h>
 #include <cuda_runtime.h>
 
-#define idx blockIdx.x*blockDim.x+threadIdx.x
-#define stx blockDim.x*gridDim.x
+#define idx (blockIdx.x*blockDim.x+threadIdx.x)
+#define stx (blockDim.x*gridDim.x)
 
 
 __device__
-float sinusoidal(int t, float ds, float freq) {
+float sinusoidal(int ts, float ds, float freq) {
     float dt = ds/6e8f;  /* time step (s) */
-    return sinf(2*M_PI*freq*dt*t);
+    return sinf(2*M_PI*freq*dt*ts);
 }
 
 
 __global__
-void exfield(int t, int nx, float *cb, float *ex, float *hy) {
+void exfield(int ts, int nx, float *cb, float *hy, float *ex) {
     /* calculate the Ex field */
     for (int i = idx+1; i < nx; i += stx)
         ex[i] += cb[i] * (hy[i-1] - hy[i]);
     /* put a sinusoidal wave at the low end */
-    if (idx == 1) ex[1] += sinusoidal(t, 0.01f, 700e6f);
+    if (idx == 1) ex[1] += sinusoidal(ts, 0.01f, 700e6f);
 }
 
 
 __global__
-void hyfield(int nx, float *ex, float *hy, float *bc) {
+void hyfield(int nx, float *bc, float *ex, float *hy) {
     /* absorbing boundary conditions */
     if (idx == 0) ex[0] = bc[0], bc[0] = bc[1], bc[1] = ex[1];
     if (idx == nx-1) ex[nx-1] = bc[3], bc[3] = bc[2], bc[2] = ex[nx-2];
@@ -56,11 +56,9 @@ int main() {
     int ns = 40000;  /* number of time steps */
 
     float *ex, *hy;
-    /* allocate unified memory accessible from host or device */
     cudaMallocManaged(&ex, nx*sizeof(*ex));
     cudaMallocManaged(&hy, nx*sizeof(*hy));
 
-    /* initialize ex and hy arrays on the host */
     for (int i = 0; i < nx; i++) {
         ex[i] = 0.0f;
         hy[i] = 0.0f;
@@ -78,9 +76,9 @@ int main() {
     int numSM;
     cudaDeviceGetAttribute(&numSM, cudaDevAttrMultiProcessorCount, 0);
 
-    dim3 gridDim, blockDim;
-    blockDim.x = 256;
-    gridDim.x = 32*numSM;
+    dim3 grdDim, blkDim;
+    blkDim.x = 256;
+    grdDim.x = 32*numSM;
 
     cudaEvent_t stime, ntime;
     cudaEventCreate(&stime);
@@ -88,9 +86,9 @@ int main() {
 
     cudaEventRecord(stime, 0);
 
-    for (int t = 1; t <= ns; t++) {
-        exfield<<<gridDim, blockDim>>>(t, nx, cb, ex, hy);
-        hyfield<<<gridDim, blockDim>>>(nx, ex, hy, bc);
+    for (int ts = 1; ts <= ns; ts++) {
+        exfield<<<grdDim, blkDim>>>(ts, nx, cb, hy, ex);
+        hyfield<<<grdDim, blkDim>>>(nx, bc, ex, hy);
     }
 
     cudaDeviceSynchronize();
