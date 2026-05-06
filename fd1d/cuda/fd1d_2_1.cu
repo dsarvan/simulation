@@ -1,4 +1,4 @@
-/* File: fd1d_2_1.cu
+/* File: fdtd21.cu
  * Name: D.Saravanan
  * Date: 25/11/2021
  * Simulation of a propagating sinusoidal wave of 700 MHz striking a lossy
@@ -10,44 +10,44 @@
 #include <math.h>
 #include <cuda_runtime.h>
 
-#define idx blockIdx.x*blockDim.x+threadIdx.x
-#define stx blockDim.x*gridDim.x
+#define idx (blockIdx.x*blockDim.x+threadIdx.x)
+#define stx (blockDim.x*gridDim.x)
 
 
 typedef struct {
     float *nax, *nbx;
-} medium;
+} Medium;
 
 
 __device__
-float sinusoidal(int t, float ds, float freq) {
+float sinusoidal(int ts, float ds, float freq) {
     float dt = ds/6e8f;  /* time step (s) */
-    return sinf(2*M_PI*freq*dt*t);
+    return sinf(2*M_PI*freq*dt*ts);
 }
 
 
 __global__
-void dxfield(int t, int nx, float *dx, float *hy) {
+void dxfield(int ts, int nx, float *hy, float *dx) {
     /* calculate the electric flux density Dx */
     for (int i = idx+1; i < nx; i += stx)
         dx[i] += 0.5f * (hy[i-1] - hy[i]);
     /* put a sinusoidal wave at the low end */
-    if (idx == 1) dx[1] += sinusoidal(t, 0.01f, 700e6f);
+    if (idx == 1) dx[1] += sinusoidal(ts, 0.01f, 700e6f);
 }
 
 
 __global__
-void exfield(int nx, medium *md, float *dx, float *ix, float *ex) {
+void exfield(int nx, Medium md, float *ix, float *dx, float *ex) {
     /* calculate the Ex field from Dx */
     for (int i = idx+1; i < nx; i += stx) {
-        ex[i] = md->nax[i] * (dx[i] - ix[i]);
-        ix[i] += md->nbx[i] * ex[i];
+        ex[i] = md.nax[i] * (dx[i] - ix[i]);
+        ix[i] += md.nbx[i] * ex[i];
     }
 }
 
 
 __global__
-void hyfield(int nx, float *ex, float *hy, float *bc) {
+void hyfield(int nx, float *bc, float *ex, float *hy) {
     /* absorbing boundary conditions */
     if (idx == 0) ex[0] = bc[0], bc[0] = bc[1], bc[1] = ex[1];
     if (idx == nx-1) ex[nx-1] = bc[3], bc[3] = bc[2], bc[2] = ex[nx-2];
@@ -57,8 +57,8 @@ void hyfield(int nx, float *ex, float *hy, float *bc) {
 }
 
 
-medium dielectric(int nx, float dt, float epsr, float sigma) {
-    medium md;
+Medium dielectric(int nx, float dt, float epsr, float sigma) {
+    Medium md;
     cudaMallocManaged(&md.nax, nx*sizeof(*md.nax));
     cudaMallocManaged(&md.nbx, nx*sizeof(*md.nbx));
     for (int i = 0; i < nx; md.nax[i] = 1.0f, i++);
@@ -78,13 +78,11 @@ int main() {
     int ns = 740;  /* number of time steps */
 
     float *dx, *ex, *ix, *hy;
-    /* allocate unified memory accessible from host or device */
     cudaMallocManaged(&dx, nx*sizeof(*dx));
     cudaMallocManaged(&ex, nx*sizeof(*ex));
     cudaMallocManaged(&ix, nx*sizeof(*ix));
     cudaMallocManaged(&hy, nx*sizeof(*hy));
 
-    /* initialize dx, ex, ix and hy arrays on the host */
     for (int i = 0; i < nx; i++) {
         dx[i] = 0.0f;
         ex[i] = 0.0f;
@@ -100,19 +98,19 @@ int main() {
     float dt = ds/6e8f;  /* time step (s) */
     float epsr = 4.0f;  /* relative permittivity */
     float sigma = 0.04f;  /* conductivity (S/m) */
-    medium md = dielectric(nx, dt, epsr, sigma);
+    Medium md = dielectric(nx, dt, epsr, sigma);
 
     int numSM;
     cudaDeviceGetAttribute(&numSM, cudaDevAttrMultiProcessorCount, 0);
 
-    dim3 gridDim, blockDim;
-    blockDim.x = 256;
-    gridDim.x = 32*numSM;
+    dim3 grdDim, blkDim;
+    blkDim.x = 256;
+    grdDim.x = 32*numSM;
 
-    for (int t = 1; t <= ns; t++) {
-        dxfield<<<gridDim, blockDim>>>(t, nx, dx, hy);
-        exfield<<<gridDim, blockDim>>>(nx, &md, dx, ix, ex);
-        hyfield<<<gridDim, blockDim>>>(nx, ex, hy, bc);
+    for (int ts = 1; ts <= ns; ts++) {
+        dxfield<<<grdDim, blkDim>>>(ts, nx, hy, dx);
+        exfield<<<grdDim, blkDim>>>(nx, md, ix, dx, ex);
+        hyfield<<<grdDim, blkDim>>>(nx, bc, ex, hy);
     }
 
     cudaDeviceSynchronize();
