@@ -1,4 +1,4 @@
-/* File: fd1d_2_3.cu
+/* File: fdtd23.cu
  * Name: D.Saravanan
  * Date: 10/01/2022
  * Simulation of a pulse striking a frequency-dependent dielectric material and
@@ -10,67 +10,66 @@
 #include <math.h>
 #include <cuda_runtime.h>
 
-#define idx blockIdx.x*blockDim.x+threadIdx.x
-#define stx blockDim.x*gridDim.x
+#define idx (blockIdx.x*blockDim.x+threadIdx.x)
+#define stx (blockDim.x*gridDim.x)
+
+
+typedef struct {
+    float *rpt, *ipt;
+    float *rin, *iin;
+} FTrans;
 
 
 typedef struct {
     float *nax, *nbx;
     float *ncx, *ndx;
-} medium;
-
-
-typedef struct {
-    float *r_pt, *i_pt;
-    float *r_in, *i_in;
-} ftrans;
+} Medium;
 
 
 __device__
-float gaussian(int t, int t0, float sigma) {
-    return expf(-0.5f*(t - t0)/sigma*(t - t0)/sigma);
+float gaussian(int ts, int t0, float sigma) {
+    return expf(-0.5f*(ts - t0)/sigma*(ts - t0)/sigma);
 }
 
 
 __global__
-void fourier(int t, int nf, int nx, float dt, float *freq, float *ex, ftrans *ft) {
-    for (int n = threadIdx.y; n < nf; n += blockDim.y) {
+void fourier(int ts, int nf, int nx, float dt, float *freq, float *ex, FTrans ft) {
+    for (int n = 0; n < nf; n++) {
         /* calculate the Fourier transform of input source */
-        if (idx == 0) ft->r_in[n] += cosf(2*M_PI*freq[n]*dt*t) * ex[10];
-        if (idx == 0) ft->i_in[n] -= sinf(2*M_PI*freq[n]*dt*t) * ex[10];
+        if (idx == 0) ft.rin[n] += cosf(2*M_PI*freq[n]*dt*ts) * ex[10];
+        if (idx == 0) ft.iin[n] -= sinf(2*M_PI*freq[n]*dt*ts) * ex[10];
         for (int i = idx; i < nx; i += stx) {
             /* calculate the Fourier transform of Ex field */
-            int m = n*nx+i;
-            ft->r_pt[m] += cosf(2*M_PI*freq[n]*dt*t) * ex[i];
-            ft->i_pt[m] -= sinf(2*M_PI*freq[n]*dt*t) * ex[i];
+            ft.rpt[n*nx+i] += cosf(2*M_PI*freq[n]*dt*ts) * ex[i];
+            ft.ipt[n*nx+i] -= sinf(2*M_PI*freq[n]*dt*ts) * ex[i];
         }
     }
 }
 
 
 __global__
-void dxfield(int t, int nx, float *dx, float *hy) {
+void dxfield(int ts, int nx, float *hy, float *dx) {
     /* calculate the electric flux density Dx */
     for (int i = idx+1; i < nx; i += stx)
         dx[i] += 0.5f * (hy[i-1] - hy[i]);
     /* put a Gaussian pulse at the low end */
-    if (idx == 1) dx[1] += gaussian(t, 50, 10.0f);
+    if (idx == 1) dx[1] += gaussian(ts, 50, 10.0f);
 }
 
 
 __global__
-void exfield(int nx, medium *md, float *dx, float *ix, float *sx, float *ex) {
+void exfield(int nx, Medium md, float *ix, float *sx, float *dx, float *ex) {
     /* calculate the Ex field from Dx */
     for (int i = idx+1; i < nx; i += stx) {
-        ex[i] = md->nax[i] * (dx[i] - ix[i] - md->ncx[i] * sx[i]);
-        ix[i] += md->nbx[i] * ex[i];
-        sx[i] = md->ncx[i] * sx[i] + md->ndx[i] * ex[i];
+        ex[i] = md.nax[i] * (dx[i] - ix[i] - md.ncx[i] * sx[i]);
+        ix[i] += md.nbx[i] * ex[i];
+        sx[i] = md.ncx[i] * sx[i] + md.ndx[i] * ex[i];
     }
 }
 
 
 __global__
-void hyfield(int nx, float *ex, float *hy, float *bc) {
+void hyfield(int nx, float *bc, float *ex, float *hy) {
     /* absorbing boundary conditions */
     if (idx == 0) ex[0] = bc[0], bc[0] = bc[1], bc[1] = ex[1];
     if (idx == nx-1) ex[nx-1] = bc[3], bc[3] = bc[2], bc[2] = ex[nx-2];
@@ -80,8 +79,8 @@ void hyfield(int nx, float *ex, float *hy, float *bc) {
 }
 
 
-medium dielectric(int nx, float dt, float chi, float tau, float epsr, float sigma) {
-    medium md;
+Medium dielectric(int nx, float dt, float chi, float tau, float epsr, float sigma) {
+    Medium md;
     cudaMallocManaged(&md.nax, nx*sizeof(*md.nax));
     cudaMallocManaged(&md.nbx, nx*sizeof(*md.nbx));
     cudaMallocManaged(&md.ncx, nx*sizeof(*md.ncx));
@@ -94,7 +93,7 @@ medium dielectric(int nx, float dt, float chi, float tau, float epsr, float sigm
     for (int i = nx/2; i < nx; i++) {
         md.nax[i] = 1/(epsr + sigma*dt/eps0 + chi*dt/tau);
         md.nbx[i] = sigma*dt/eps0;
-        md.ncx[i] = exp(-dt/tau);
+        md.ncx[i] = expf(-dt/tau);
         md.ndx[i] = chi*dt/tau;
     }
     return md;
@@ -107,14 +106,12 @@ int main() {
     int ns = 740;  /* number of time steps */
 
     float *dx, *ex, *ix, *sx, *hy;
-    /* allocate unified memory accessible from host or device */
     cudaMallocManaged(&dx, nx*sizeof(*dx));
     cudaMallocManaged(&ex, nx*sizeof(*ex));
     cudaMallocManaged(&ix, nx*sizeof(*ix));
     cudaMallocManaged(&sx, nx*sizeof(*sx));
     cudaMallocManaged(&hy, nx*sizeof(*hy));
 
-    /* initialize dx, ex, ix, sx and hy arrays on the host */
     for (int i = 0; i < nx; i++) {
         dx[i] = 0.0f;
         ex[i] = 0.0f;
@@ -133,7 +130,7 @@ int main() {
     float tau = 0.001e-6f;  /* relaxation time (s) */
     float epsr = 2.0f;  /* relative permittivity */
     float sigma = 0.01f;  /* conductivity (S/m) */
-    medium md = dielectric(nx, dt, chi, tau, epsr, sigma);
+    Medium md = dielectric(nx, dt, chi, tau, epsr, sigma);
 
     int nf = 3;  /* number of frequencies */
     /* frequency 50 MHz, 200 MHz, 500 MHz */
@@ -141,20 +138,20 @@ int main() {
     cudaMallocManaged(&freq, nf*sizeof(*freq));
     freq[0] = 50e6f; freq[1] = 200e6f; freq[2] = 500e6f;
 
-    ftrans ft;
-    cudaMallocManaged(&ft.r_pt, nf*nx*sizeof(*ft.r_pt));
-    cudaMallocManaged(&ft.i_pt, nf*nx*sizeof(*ft.i_pt));
-    cudaMallocManaged(&ft.r_in, nf*sizeof(*ft.r_in));
-    cudaMallocManaged(&ft.i_in, nf*sizeof(*ft.i_in));
+    FTrans ft;
+    cudaMallocManaged(&ft.rpt, nf*nx*sizeof(*ft.rpt));
+    cudaMallocManaged(&ft.ipt, nf*nx*sizeof(*ft.ipt));
+    cudaMallocManaged(&ft.rin, nf*sizeof(*ft.rin));
+    cudaMallocManaged(&ft.iin, nf*sizeof(*ft.iin));
 
     for (int i = 0; i < nf*nx; i++) {
-        ft.r_pt[i] = 0.0f;
-        ft.i_pt[i] = 0.0f;
+        ft.rpt[i] = 0.0f;
+        ft.ipt[i] = 0.0f;
     }
 
     for (int i = 0; i < nf; i++) {
-        ft.r_in[i] = 0.0f;
-        ft.i_in[i] = 0.0f;
+        ft.rin[i] = 0.0f;
+        ft.iin[i] = 0.0f;
     }
 
     float *amplt, *phase;
@@ -166,15 +163,15 @@ int main() {
         phase[i] = 0.0f;
     }
 
-    dim3 gridDim, blockDim;
-    blockDim.x = 256;
-    gridDim.x = (nx+blockDim.x-1)/blockDim.x;
+    dim3 grdDim, blkDim;
+    blkDim.x = 256;
+    grdDim.x = (nx+blkDim.x-1)/blkDim.x;
 
-    for (int t = 1; t <= ns; t++) {
-        dxfield<<<gridDim, blockDim>>>(t, nx, dx, hy);
-        exfield<<<gridDim, blockDim>>>(nx, &md, dx, ix, sx, ex);
-        fourier<<<gridDim, dim3(256,4)>>>(t, nf, nx, dt, freq, ex, &ft);
-        hyfield<<<gridDim, blockDim>>>(nx, ex, hy, bc);
+    for (int ts = 1; ts <= ns; ts++) {
+        dxfield<<<grdDim, blkDim>>>(ts, nx, hy, dx);
+        exfield<<<grdDim, blkDim>>>(nx, md, ix, sx, dx, ex);
+        fourier<<<grdDim, blkDim>>>(ts, nf, nx, dt, freq, ex, ft);
+        hyfield<<<grdDim, blkDim>>>(nx, bc, ex, hy);
     }
 
     cudaDeviceSynchronize();
@@ -183,15 +180,15 @@ int main() {
     for (int n = 0; n < nf; n++) {
         for (int i = 0; i < nx; i++) {
             int m = n*nx+i;
-            amplt[m] = 1/hypotf(ft.r_in[n],ft.i_in[n]) * hypotf(ft.r_pt[m],ft.i_pt[m]);
-            phase[m] = atan2f(ft.i_pt[m],ft.r_pt[m]) - atan2f(ft.i_in[n],ft.r_in[n]);
+            amplt[m] = 1/hypotf(ft.rin[n],ft.iin[n]) * hypotf(ft.rpt[m],ft.ipt[m]);
+            phase[m] = atan2f(ft.ipt[m],ft.rpt[m]) - atan2f(ft.iin[n],ft.rin[n]);
         }
     }
 
-    cudaFree(ft.r_pt);
-    cudaFree(ft.i_pt);
-    cudaFree(ft.r_in);
-    cudaFree(ft.i_in);
+    cudaFree(ft.rpt);
+    cudaFree(ft.ipt);
+    cudaFree(ft.rin);
+    cudaFree(ft.iin);
     cudaFree(md.nax);
     cudaFree(md.nbx);
     cudaFree(md.ncx);
